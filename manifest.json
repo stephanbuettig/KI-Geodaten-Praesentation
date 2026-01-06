@@ -1,0 +1,23 @@
+{
+    "name": "KI × Geoinformation",
+    "short_name": "KI-Geodaten",
+    "description": "Interaktive Präsentation zu KI-Potenzialen in der Geoinformation",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "orientation": "landscape",
+    "theme_color": "#0672A2",
+    "background_color": "#ffffff",
+    "lang": "de",
+    "icons": [
+        {
+            "src": "data/1-0.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": [
+        "education",
+        "productivity"
+    ]
+}
