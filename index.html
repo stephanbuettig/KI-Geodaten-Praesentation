@@ -1,0 +1,2498 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧩 KI-Potenziale im GeoSN 🧵</title>
+
+    <script src="lib/tailwind.min.js"></script>
+    <link href="lib/fonts/inter.css" rel="stylesheet">
+    <script src="lib/lucide.min.js"></script>
+    <script src="lib/d3.min.js"></script>
+    <style>
+        /* --- 1. Setup, Themes & Core Variables --- */
+        :root {
+            --accent-color: #0672A2;
+            --accent-rgb: 6, 114, 162;
+            --accent-text-color: #38bdf8;
+            --nav-dot-text: #ffffff;
+            --bg-image-opacity: 0.15;
+            --transition-fast: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-medium: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        html[data-theme='light'] {
+            --bg-color: #ffffff;
+            --text-color: #1e293b;
+            --text-light: #475569;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --card-border: #cbd5e1;
+            --nav-dot-bg: rgba(0, 0, 0, 0.2);
+            --d3-bg: #e2e8f0;
+            --d3-text: #1e293b;
+            --d3-link: #64748b;
+            --quote-initial-color: rgba(0, 0, 0, 0.25);
+            --quote-faded-color: rgba(0, 0, 0, 0.1);
+        }
+
+        html[data-theme='dark'] {
+            --bg-color: #000000;
+            --text-color: #e7e5e4;
+            --text-light: #a8a29e;
+            --card-bg: rgba(28, 25, 23, 0.8);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --nav-dot-bg: rgba(255, 255, 255, 0.3);
+            --d3-bg: #f8fafc;
+            --d3-text: #1e293b;
+            --d3-link: #94a3b8;
+            --quote-initial-color: rgba(255, 255, 255, 0.25);
+            --quote-faded-color: rgba(255, 255, 255, 0.15);
+        }
+
+        /* --- 2. Base Layout & Scroll Behavior --- */
+        html {
+            scroll-behavior: smooth;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        html::-webkit-scrollbar {
+            display: none;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            scroll-snap-type: y mandatory;
+            overflow-y: scroll;
+            overflow-x: hidden;
+            height: 100vh;
+            transition: background-color var(--transition-medium), color var(--transition-medium);
+        }
+
+        body.loading {
+            overflow: hidden;
+        }
+
+        body.modal-open {
+            overflow: hidden;
+        }
+
+        ::selection {
+            background-color: var(--accent-color);
+            color: #ffffff;
+        }
+
+        /* --- 2.2. Preloader --- */
+        #loading-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-color);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.8s ease, visibility 0.8s;
+        }
+
+        #loading-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid var(--card-border);
+            border-bottom-color: var(--accent-color);
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* --- 3. Story Card & Content Layout --- */
+        .story-card {
+            scroll-snap-align: start;
+            height: 100vh;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-content {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            max-width: 1000px;
+            height: 650px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            overflow-y: hidden;
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 1.5rem;
+            border: 1px solid var(--card-border);
+            transform: translateY(20px);
+            opacity: 0;
+            transition: transform var(--transition-slow), opacity var(--transition-slow),
+                background-color var(--transition-medium), border-color var(--transition-medium);
+            will-change: transform, opacity;
+        }
+
+        .story-card.is-visible .card-content {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Specific override for Card 1 to keep its original compact height */
+        #card-1 .card-content {
+            height: auto;
+            min-height: auto;
+            padding: 2rem;
+        }
+
+        /* --- 4. Background Effects & Corporate Design --- */
+        #background-container {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .parallax-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center center;
+            opacity: 0;
+            transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: opacity;
+        }
+
+        html.corporate-design-active .parallax-bg {
+            -webkit-mask-image: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-1000 0 1612.28 437.95'><path fill='white' d='M476.22,7.9h136.06V0h-136.06C447.52,0,446.96,36.88,423.57,36.88H-1000v7.9h1423.57c28.8,0,29.15-36.88,52.65-36.88M475.02,391.86h137.27V9.22h-136.06c-22.49,0-23.09,36.88-52.65,36.88H-1000v382.64h1422.37c22.35,0,23.22-36.88,52.65-36.88M612.28,401.08v-7.9h-137.27c-28.7,0-29.26,36.88-52.65,36.88H-1000v7.9h1422.37c28.8,0,29.15-36.88,52.65-36.88h137.27Z'/></svg>");
+            mask-image: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-1000 0 1612.28 437.95'><path fill='white' d='M476.22,7.9h136.06V0h-136.06C447.52,0,446.96,36.88,423.57,36.88H-1000v7.9h1423.57c28.8,0,29.15-36.88,52.65-36.88M475.02,391.86h137.27V9.22h-136.06c-22.49,0-23.09,36.88-52.65,36.88H-1000v382.64h1422.37c22.35,0,23.22-36.88,52.65-36.88M612.28,401.08v-7.9h-137.27c-28.7,0-29.26,36.88-52.65,36.88H-1000v7.9h1422.37c28.8,0,29.15-36.88,52.65-36.88h137.27Z'/></svg>");
+            -webkit-mask-size: auto 100%;
+            mask-size: auto 100%;
+            -webkit-mask-position: right center;
+            mask-position: right center;
+            -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+        }
+
+        /* --- 5. UI Components: Navigation & Indicators --- */
+        .scroll-indicator {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            animation: bounce 2s infinite;
+            color: var(--text-color);
+        }
+
+        @keyframes bounce {
+
+            0%,
+            20%,
+            50%,
+            80%,
+            100% {
+                transform: translate(-50%, 0);
+            }
+
+            40% {
+                transform: translate(-50%, -20px);
+            }
+
+            60% {
+                transform: translate(-50%, -10px);
+            }
+        }
+
+        .chapter-nav {
+            position: fixed;
+            top: 50%;
+            right: 2rem;
+            transform: translateY(-50%);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+            width: 28px;
+        }
+
+        .chapter-nav a {
+            width: 12px;
+            height: 12px;
+            background-color: var(--nav-dot-bg);
+            border-radius: 50%;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--nav-dot-text);
+            text-decoration: none;
+        }
+
+        .chapter-nav a.active {
+            width: 28px;
+            height: 28px;
+            background-color: var(--accent-color);
+        }
+
+        .chapter-nav a span {
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .chapter-nav a.active span {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        #fixed-attributions {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .image-attribution {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            font-size: 11px;
+            text-decoration: none;
+            pointer-events: auto;
+            opacity: 0;
+            white-space: nowrap;
+            transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s;
+        }
+
+        html[data-theme='light'] .image-attribution {
+            color: rgba(0, 0, 0, 0.5);
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+        }
+
+        html[data-theme='light'] .image-attribution:hover {
+            color: #000000;
+        }
+
+        html[data-theme='dark'] .image-attribution {
+            color: rgba(255, 255, 255, 0.6);
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+        }
+
+        html[data-theme='dark'] .image-attribution:hover {
+            color: #ffffff;
+        }
+
+        /* --- 6. UI Components: Settings Panel --- */
+        .settings-container {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            z-index: 101;
+            display: flex;
+            align-items: center;
+            height: 44px;
+            padding: 0 8px;
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 22px;
+            border: 1px solid var(--card-border);
+            opacity: 0;
+            transform: translateY(-20px);
+            pointer-events: none;
+            transition: all .5s cubic-bezier(.4, 0, .2, 1);
+        }
+
+        .settings-container.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .settings-expander {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            overflow: hidden;
+            max-width: 0;
+            opacity: 0;
+            transition: max-width 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-in-out, margin-right 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+            margin-right: 0;
+        }
+
+        .settings-container.expanded .settings-expander {
+            max-width: 500px;
+            opacity: 1;
+            margin-right: 8px;
+        }
+
+        .expander-btn {
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            transition: color 0.3s, opacity 0.4s ease, width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            flex-shrink: 0;
+            opacity: 1;
+            margin-right: 4px;
+            transform: translateX(-3px);
+        }
+
+        .expander-btn:hover {
+            color: var(--text-color);
+        }
+
+        .settings-container.expanded .expander-btn {
+            width: 0;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .opacity-control {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+
+        .opacity-control .icon {
+            color: var(--text-light);
+            transition: color .3s;
+        }
+
+        .opacity-control:hover .icon {
+            color: var(--text-color);
+        }
+
+        #opacity-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 80px;
+            height: 5px;
+            background: var(--nav-dot-bg);
+            outline: 0;
+            border-radius: 5px;
+            transition: background-color .5s;
+        }
+
+        #opacity-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent-color);
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        #opacity-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: var(--accent-color);
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+        }
+
+        .opacity-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        #opacity-input {
+            width: 45px;
+            background-color: transparent;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            color: var(--text-color);
+            text-align: right;
+            font-size: 12px;
+            padding: 2px 18px 2px 2px;
+            -moz-appearance: textfield;
+            appearance: textfield;
+            transition: border-color 0.3s;
+        }
+
+        #opacity-input:hover,
+        #opacity-input:focus {
+            border-color: var(--nav-dot-bg);
+            outline: none;
+        }
+
+        #opacity-input::-webkit-outer-spin-button,
+        #opacity-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .opacity-percent-sign {
+            color: var(--text-light);
+            font-size: 12px;
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        .theme-switch {
+            display: inline-block;
+            height: 28px;
+            position: relative;
+            width: 54px;
+        }
+
+        .theme-switch input {
+            display: none;
+        }
+
+        .theme-switch .slider {
+            background-color: #3f3f46;
+            bottom: 0;
+            cursor: pointer;
+            left: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            transition: .4s;
+            border-radius: 28px;
+        }
+
+        .theme-switch .slider:before {
+            background-color: #fff;
+            bottom: 4px;
+            content: "";
+            height: 20px;
+            left: 4px;
+            position: absolute;
+            transition: .4s;
+            width: 20px;
+            border-radius: 50%;
+        }
+
+        .theme-switch input:checked+.slider {
+            background-color: var(--accent-color);
+        }
+
+        .theme-switch input:checked+.slider:before {
+            transform: translateX(26px);
+        }
+
+        .theme-switch .slider .sun-icon,
+        .theme-switch .slider .moon-icon {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: opacity .3s ease, color .4s ease;
+        }
+
+        .theme-switch .slider .sun-icon {
+            left: 6px;
+            opacity: 0;
+            color: var(--nav-dot-text);
+        }
+
+        .theme-switch .slider .moon-icon {
+            right: 6px;
+            opacity: 1;
+            color: var(--accent-color);
+        }
+
+        .theme-switch input:checked+.slider .sun-icon {
+            opacity: 1;
+        }
+
+        .theme-switch input:checked+.slider .moon-icon {
+            opacity: 0;
+        }
+
+        #color-picker {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            background-color: transparent;
+        }
+
+        #color-picker::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        #color-picker::-webkit-color-swatch {
+            border-radius: 50%;
+            border: 2px solid var(--text-light);
+            transition: border-color .3s;
+        }
+
+        #color-picker:hover::-webkit-color-swatch {
+            border-color: var(--text-color);
+        }
+
+        .print-btn,
+        .cd-btn {
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            transition: color .3s, background-color 0.3s;
+            flex-shrink: 0;
+            border-radius: 50%;
+        }
+
+        .print-btn:hover,
+        .cd-btn:hover {
+            color: var(--text-color);
+        }
+
+        .cd-btn.active {
+            color: var(--accent-color);
+            background-color: rgba(var(--accent-rgb), 0.1);
+        }
+
+        /* --- 7. UI Components: Modals & Carousel --- */
+        .carousel-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .carousel-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .carousel-container {
+            position: relative;
+            width: 90vw;
+            max-width: 1200px;
+            height: 80vh;
+            max-height: 800px;
+            transform: scale(0.95);
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .carousel-overlay.visible .carousel-container {
+            transform: scale(1);
+        }
+
+        .carousel-slide {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 1s ease-in-out;
+        }
+
+        .carousel-slide.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .carousel-slide img,
+        .carousel-slide iframe,
+        .carousel-slide video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 1rem;
+        }
+
+        .carousel-title {
+            position: absolute;
+            top: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            z-index: 10;
+            text-align: center;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .carousel-title a {
+            color: white;
+            opacity: 0.7;
+            transition: opacity 0.3s;
+        }
+
+        .carousel-title a:hover {
+            opacity: 1;
+        }
+
+        .carousel-caption {
+            position: absolute;
+            bottom: 1.5rem;
+            left: 1.5rem;
+            right: 1.5rem;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.75rem;
+            text-align: center;
+        }
+
+        .carousel-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border-radius: 50%;
+            width: 2.5rem;
+            height: 2.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        .carousel-close:hover {
+            background: rgba(0, 0, 0, 0.8);
+            transform: scale(1.1);
+        }
+
+        .carousel-nav {
+            position: absolute;
+            top: 50%;
+            z-index: 10;
+            transform: translateY(-50%);
+            width: 3rem;
+            height: 3rem;
+            background: rgba(0, 0, 0, 0.4);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .carousel-overlay:hover .carousel-nav {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .carousel-nav:hover {
+            background: rgba(0, 0, 0, 0.7);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .carousel-nav.prev {
+            left: 1.5rem;
+        }
+
+        .carousel-nav.next {
+            right: 1.5rem;
+        }
+
+        .carousel-counter {
+            position: absolute;
+            top: 1.5rem;
+            left: 1.5rem;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+        }
+
+        .carousel-slide .slide-attribution {
+            position: absolute;
+            z-index: 15;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.9);
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 2px 8px;
+            border-radius: 6px;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            text-shadow: none;
+            text-decoration: none;
+            transition: color 0.3s ease, opacity 0.3s ease, background-color 0.3s ease;
+            opacity: 0;
+        }
+
+        .carousel-slide .slide-attribution:hover {
+            color: #fff;
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+
+        /* --- 8. Content-Specific Styling & Animations --- */
+        .accent-text {
+            color: var(--accent-text-color);
+        }
+
+        .light-text {
+            color: var(--text-light);
+        }
+
+        .info-kachel {
+            transition: all 0.3s ease-in-out;
+            border-color: rgba(var(--accent-rgb), 0.5);
+        }
+
+        .info-kachel:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px -5px rgba(var(--accent-rgb), 0.15);
+        }
+
+        .nutzen-box {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            margin-top: auto;
+            width: 100%;
+            padding: 0.75rem 1.5rem;
+            border-radius: 1rem;
+            background: rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.12);
+        }
+
+        .nutzen-box i {
+            color: var(--accent-color);
+            flex-shrink: 0;
+        }
+
+        .presenter-highlight {
+            animation: pulse-highlight 1s ease-out;
+        }
+
+        @keyframes pulse-highlight {
+            0% {
+                box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.5);
+            }
+
+            100% {
+                box-shadow: 0 0 0 10px rgba(var(--accent-rgb), 0);
+            }
+        }
+
+        .reveal-item {
+            opacity: 0.4;
+            transition: all 0.5s ease-in-out;
+            transform: scale(1);
+            box-shadow: none;
+        }
+
+        .reveal-item.revealed {
+            opacity: 1;
+            transform: scale(1.03);
+            box-shadow: 0 8px 25px -5px rgba(var(--accent-rgb), 0.15);
+        }
+
+        .checklist-item .icon-wrapper {
+            position: relative;
+        }
+
+        .checklist-item .original-icon,
+        .checklist-item .checked-icon {
+            transition: all 0.8s ease-in-out;
+        }
+
+        .checklist-item .checked-icon {
+            opacity: 0;
+            transform: scale(0.5);
+        }
+
+        .checklist-item.checked .original-icon {
+            opacity: 0;
+            transform: scale(0.5);
+        }
+
+        .checklist-item.checked .checked-icon {
+            opacity: 1;
+            transform: scale(1);
+            color: #22c55e;
+        }
+
+        /* --- 8.2. Special Layout: Interactive D3 Graph --- */
+        .interactive-container {
+            width: 100%;
+            height: 70vh;
+            max-height: 500px;
+            background: var(--d3-bg);
+            border-radius: 1rem;
+            position: relative;
+            cursor: grab;
+        }
+
+        .interactive-container:active {
+            cursor: grabbing;
+        }
+
+        .interactive-container .node {
+            cursor: pointer;
+        }
+
+        .interactive-container .link {
+            stroke: var(--d3-link);
+            stroke-opacity: 0.6;
+        }
+
+        .interactive-container .node rect {
+            stroke-width: 2px;
+            filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.05));
+        }
+
+        .interactive-container .node text {
+            pointer-events: none;
+            font-size: 12px;
+            fill: var(--d3-text);
+            text-anchor: middle;
+            dominant-baseline: central;
+        }
+
+        /* --- 8.3. Special Layout: AI Carousel (Card 3) --- */
+        #ai-carousel-scene {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            height: 70vh;
+            max-height: 500px;
+            position: relative;
+            margin: auto;
+            background-color: var(--card-bg);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+            overflow: hidden;
+            border-radius: 1rem;
+            border: 1px solid var(--card-border);
+        }
+
+        #ai-carousel-scene #left-zone {
+            background: var(--card-bg);
+            height: 100%;
+            width: 300px;
+            display: flex;
+            align-items: center;
+        }
+
+        #ai-carousel-scene .list {
+            list-style: none;
+            padding: 1rem 0;
+            margin: 0;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 1rem;
+            height: 100%;
+        }
+
+        #ai-carousel-scene .item input[type="radio"] {
+            display: none;
+        }
+
+        #ai-carousel-scene .item label {
+            display: flex;
+            align-items: center;
+            padding-left: 2rem;
+            opacity: 0.6;
+            height: 100%;
+            cursor: pointer;
+            transition: opacity 0.3s, border-right 0.3s, color 0.3s;
+            text-transform: capitalize;
+            border-right: solid 8px transparent;
+            font-size: 1.5rem;
+        }
+
+        #ai-carousel-scene .item label:hover {
+            opacity: 1;
+        }
+
+        #ai-carousel-scene .item input[type="radio"]:checked~label {
+            opacity: 1;
+            font-weight: 600;
+        }
+
+        #ai-carousel-scene .item label .icon {
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        #ai-carousel-scene .item .content {
+            position: absolute;
+            left: 301px;
+            top: -100%;
+            width: calc(100% - 301px);
+            height: 100%;
+            animation: 0.75s ease-out 0s 1 slideout;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        #ai-carousel-scene .item .content::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            border-radius: 1rem;
+            transition: opacity 0.75s;
+            background-blend-mode: overlay;
+        }
+
+        #ai-carousel-scene .item input[type="radio"]:checked~.content::before {
+            opacity: 0.12;
+        }
+
+        .content-attribution {
+            position: absolute;
+            bottom: 0.75rem;
+            right: 1rem;
+            font-size: 10px;
+            opacity: 0.5;
+            transition: opacity 0.3s;
+        }
+
+        .content-attribution:hover {
+            opacity: 1;
+        }
+
+        #radio_text:checked~.content::before {
+            background-image: var(--bg-img-3_1);
+        }
+
+        #radio_image:checked~.content::before {
+            background-image: var(--bg-img-3_2);
+        }
+
+        #radio_audio:checked~.content::before {
+            background-image: var(--bg-img-3_3);
+        }
+
+        #radio_video:checked~.content::before {
+            background-image: var(--bg-img-3_4);
+        }
+
+        #radio_coding:checked~.content::before {
+            background-image: var(--bg-img-3_5);
+        }
+
+        #radio_data:checked~.content::before {
+            background-image: var(--bg-img-3_6);
+        }
+
+        #radio_predictions:checked~.content::before {
+            background-image: var(--bg-img-3_7);
+        }
+
+        #radio_robotics:checked~.content::before {
+            background-image: var(--bg-img-3_8);
+        }
+
+        #ai-carousel-scene .item input[type="radio"]:checked~.content {
+            animation: 0.75s cubic-bezier(0.455, 0.03, 0.515, 0.955) 0s 1 slidein forwards;
+        }
+
+        #ai-carousel-scene .content .picto {
+            height: 96px;
+            width: 96px;
+            filter: drop-shadow(0 0 10px var(--bg-color)) drop-shadow(0 0 20px var(--bg-color));
+        }
+
+        #ai-carousel-scene .content h1,
+        #ai-carousel-scene .content p {
+            text-shadow: 0 0 8px var(--bg-color), 0 0 16px var(--bg-color), 0 0 24px var(--bg-color);
+        }
+
+        #ai-carousel-scene .content h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+        }
+
+        #ai-carousel-scene .content p {
+            max-width: 90%;
+            font-size: 1.35rem;
+            line-height: 1.75;
+            color: var(--text-light);
+        }
+
+        #ai-carousel-scene #middle-border {
+            background-color: var(--card-border);
+            height: 95%;
+            width: 1px;
+            align-self: center;
+        }
+
+        #radio_text:checked~label,
+        #radio_text:checked~.content h1,
+        #radio_text:checked~.content .picto {
+            color: #3b82f6;
+        }
+
+        #radio_text:checked~label {
+            border-right-color: #3b82f6;
+        }
+
+        #radio_image:checked~label,
+        #radio_image:checked~.content h1,
+        #radio_image:checked~.content .picto {
+            color: #8b5cf6;
+        }
+
+        #radio_image:checked~label {
+            border-right-color: #8b5cf6;
+        }
+
+        #radio_audio:checked~label,
+        #radio_audio:checked~.content h1,
+        #radio_audio:checked~.content .picto {
+            color: #10b981;
+        }
+
+        #radio_audio:checked~label {
+            border-right-color: #10b981;
+        }
+
+        #radio_video:checked~label,
+        #radio_video:checked~.content h1,
+        #radio_video:checked~.content .picto {
+            color: #ef4444;
+        }
+
+        #radio_video:checked~label {
+            border-right-color: #ef4444;
+        }
+
+        #radio_coding:checked~label,
+        #radio_coding:checked~.content h1,
+        #radio_coding:checked~.content .picto {
+            color: #f59e0b;
+        }
+
+        #radio_coding:checked~label {
+            border-right-color: #f59e0b;
+        }
+
+        #radio_data:checked~label,
+        #radio_data:checked~.content h1,
+        #radio_data:checked~.content .picto {
+            color: #6366f1;
+        }
+
+        #radio_data:checked~label {
+            border-right-color: #6366f1;
+        }
+
+        #radio_predictions:checked~label,
+        #radio_predictions:checked~.content h1,
+        #radio_predictions:checked~.content .picto {
+            color: #14b8a6;
+        }
+
+        #radio_predictions:checked~label {
+            border-right-color: #14b8a6;
+        }
+
+        #radio_robotics:checked~label,
+        #radio_robotics:checked~.content h1,
+        #radio_robotics:checked~.content .picto {
+            color: #64748b;
+        }
+
+        #radio_robotics:checked~label {
+            border-right-color: #64748b;
+        }
+
+        @keyframes slidein {
+            0% {
+                top: -100%;
+                opacity: 0;
+            }
+
+            100% {
+                top: 0px;
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideout {
+            0% {
+                top: 0;
+                opacity: 1;
+            }
+
+            100% {
+                top: -100%;
+                opacity: 0;
+            }
+        }
+
+        /* --- 8.4. Typographic Adjustments for Readability --- */
+        .info-kachel h3 {
+            font-size: 1.125rem !important;
+        }
+
+        .info-kachel p,
+        .nutzen-box p,
+        #card-6 ul li {
+            font-size: 1.125rem !important;
+            line-height: 1.75rem !important;
+        }
+
+        .nutzen-box i,
+        #card-6 ul li i {
+            width: 2.25rem;
+            height: 2.25rem;
+        }
+
+        #card-7 .info-kachel p {
+            font-size: 1.125rem !important;
+            line-height: 1.75rem !important;
+        }
+
+        /* --- 9. Print-Specific Styles --- */
+        .print-only {
+            display: none;
+        }
+
+        .print-page-indicator,
+        .print-info-bubble {
+            display: none;
+        }
+
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 0;
+            }
+
+            html {
+                --bg-color: #f8fafc !important;
+                --text-color: #1e293b !important;
+                --text-light: #475569 !important;
+                --card-bg: rgba(255, 255, 255, 0.8) !important;
+                --card-border: rgba(0, 0, 0, 0.1) !important;
+            }
+
+            body {
+                scroll-snap-type: none;
+                overflow: visible;
+                height: auto;
+                background-color: #fff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .story-card,
+            #print-back-cover {
+                height: 100vh;
+                width: 100vw;
+                display: flex !important;
+                justify-content: center;
+                align-items: center;
+                box-sizing: border-box;
+                page-break-before: always;
+            }
+
+            #card-1 {
+                page-break-before: avoid;
+            }
+
+            #print-back-cover {
+                page-break-after: avoid;
+            }
+
+            .parallax-bg,
+            #background-container,
+            .settings-container,
+            .chapter-nav,
+            .scroll-indicator,
+            #fixed-attributions {
+                display: none !important;
+            }
+
+            .print-bg {
+                display: block !important;
+                position: absolute;
+                inset: 0;
+                background-size: cover;
+                background-position: center;
+                z-index: -1;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .card-content {
+                opacity: 1 !important;
+                transform: none !important;
+                backdrop-filter: blur(10px) !important;
+                box-shadow: none !important;
+            }
+
+            .interactive-container,
+            #ai-carousel-scene {
+                border: 1px solid #ccc;
+                background: #fff !important;
+            }
+
+            .print-page-indicator,
+            .print-info-bubble {
+                display: inline-block;
+                position: absolute;
+                bottom: 1.5rem;
+                z-index: 5;
+                background-color: rgba(255, 255, 255, 0.75);
+                backdrop-filter: blur(4px);
+                padding: 0.25rem 0.75rem;
+                border-radius: 9999px;
+                font-size: 10pt;
+                font-weight: 500;
+                color: #1e293b;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                text-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+            }
+
+            .print-page-indicator {
+                right: 1.5rem;
+            }
+
+            #print-back-cover .print-info-bubble-left {
+                left: 1.5rem;
+            }
+
+            #print-back-cover .print-info-bubble-right {
+                right: 1.5rem;
+            }
+
+            .reveal-item {
+                opacity: 1 !important;
+                transform: scale(1) !important;
+            }
+
+            .checklist-item .original-icon {
+                opacity: 0 !important;
+            }
+
+            .checklist-item .checked-icon {
+                opacity: 1 !important;
+                transform: scale(1) !important;
+                color: #22c55e !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="loading">
+    <div id="loading-screen">
+        <span class="loader"></span>
+        <p class="mt-4 font-medium accent-text">Präsentation wird geladen...</p>
+    </div>
+
+    <div id="background-container">
+        <div class="parallax-bg" data-media-key="1-0"></div>
+        <div class="parallax-bg" data-media-key="2-0"></div>
+        <div class="parallax-bg" data-media-key="3-0"></div>
+        <div class="parallax-bg" data-media-key="4-0"></div>
+        <div class="parallax-bg" data-media-key="5-0"></div>
+        <div class="parallax-bg" data-media-key="6-0"></div>
+        <div class="parallax-bg" data-media-key="7-0"></div>
+    </div>
+
+    <div id="fixed-attributions">
+        <a href="https://geoportal.sachsen.de/portal/images/slide/slide-bg-879-295.png" target="_blank"
+            rel="noopener noreferrer" class="image-attribution" data-attribution-for="card-1">© Geoportal
+            Sachsenatlas</a>
+        <a href="https://www.canva.com/design/DAGxixpW-Gg/miQ6ejyYQVvQPWlzO0315A/view" target="_blank"
+            rel="noopener noreferrer" class="image-attribution" data-attribution-for="card-2">© Stephan Büttig / Gemini
+            Nano Banana</a>
+        <a href="https://www.canva.com/design/DAGxixpW-Gg/miQ6ejyYQVvQPWlzO0315A/view" target="_blank"
+            rel="noopener noreferrer" class="image-attribution" data-attribution-for="card-3">© Stephan Büttig / Gemini
+            Nano Banana</a>
+        <a href="https://www.canva.com/design/DAGxixpW-Gg/miQ6ejyYQVvQPWlzO0315A/view" target="_blank"
+            rel="noopener noreferrer" class="image-attribution" data-attribution-for="card-4">© Stephan Büttig / Gemini
+            Nano Banana</a>
+        <a href="https://www.canva.com/design/DAGxixpW-Gg/miQ6ejyYQVvQPWlzO0315A/view" target="_blank"
+            rel="noopener noreferrer" class="image-attribution" data-attribution-for="card-5">© Stephan Büttig / Gemini
+            Nano Banana</a>
+        <a href="https://www.canva.com/design/DAGxixpW-Gg/miQ6ejyYQVvQPWlzO0315A/view" target="_blank"
+            rel="noopener noreferrer" class="image-attribution" data-attribution-for="card-6">© Stephan Büttig / Gemini
+            Nano Banana</a>
+        <a href="https://www.canva.com/design/DAGxixpW-Gg/miQ6ejyYQVvQPWlzO0315A/view" target="_blank"
+            rel="noopener noreferrer" class="image-attribution" data-attribution-for="card-7">© Stephan Büttig / Gemini
+            Nano Banana</a>
+    </div>
+
+    <div class="settings-container" id="settings-container">
+        <button id="expander-button" title="Einstellungen ein-/ausblenden" class="expander-btn"><i
+                data-lucide="chevron-left" class="w-5 h-5"></i></button>
+        <div class="settings-expander" id="settings-expander">
+            <button id="cd-toggle-button" title="Corporate Design an/aus" class="cd-btn"><i data-lucide="wand-2"
+                    class="w-5 h-5"></i></button>
+            <input type="color" id="color-picker" title="Akzentfarbe wählen">
+            <div class="opacity-control" title="Hintergrund-Deckkraft">
+                <i data-lucide="layers" class="icon w-5 h-5"></i>
+                <input type="range" id="opacity-slider" min="0" max="1" step="0.05">
+                <div class="opacity-input-wrapper">
+                    <input type="number" id="opacity-input" min="0" max="100" step="5">
+                    <span class="opacity-percent-sign">%</span>
+                </div>
+            </div>
+            <label class="theme-switch" for="theme-toggle">
+                <input type="checkbox" id="theme-toggle" />
+                <div class="slider">
+                    <i data-lucide="moon" class="moon-icon w-4 h-4"></i>
+                    <i data-lucide="sun" class="sun-icon w-4 h-4"></i>
+                </div>
+            </label>
+        </div>
+        <button id="print-button" title="Seite drucken" class="print-btn"><i data-lucide="printer"
+                class="w-5 h-5"></i></button>
+    </div>
+
+    <nav class="chapter-nav" id="chapter-nav"></nav>
+
+    <section class="story-card" id="card-1" data-title="Intro">
+        <div class="print-bg"></div>
+        <div class="card-content">
+            <img id="logo-img" alt="GeoSN Logo" class="w-3/4 h-auto object-contain mx-auto media-fallback"
+                data-media-key="1-1">
+            <h1 class="text-4xl md:text-5xl font-bold mt-3 mb-4 accent-text text-center">KI ✕ Geoinformation</h1>
+            <h2 class="text-2xl md:text-3xl font-light light-text text-center">Trends und Entwicklungen</h2>
+            <p class="mt-4 text-lg text-center light-text">Potenziale für die Geoinformation von morgen</p>
+            <div class="flex flex-col items-center gap-3 mt-8">
+                <a href="https://www.linkedin.com/in/stephan-buettig/" target="_blank" rel="noopener noreferrer"
+                    title="LinkedIn-Profil öffnen" class="transition-transform hover:scale-105">
+                    <img src="./data/avatar.jpg" alt="Stephan Büttig"
+                        class="w-16 h-16 rounded-full border-2 border-white/50 shadow-lg object-cover">
+                </a>
+                <div class="text-center">
+                    <a href="https://www.linkedin.com/in/stephan-buettig/" target="_blank" rel="noopener noreferrer"
+                        class="font-medium hover:underline">Stephan Büttig</a>
+                    <span class="mx-2 light-text">·</span>
+                    <a href="https://www.digitalagentur.sachsen.de/" target="_blank" rel="noopener noreferrer"
+                        class="light-text hover:underline">Digitalagentur Sachsen</a>
+                </div>
+            </div>
+        </div>
+        <div class="scroll-indicator"><i data-lucide="arrow-down"></i></div>
+        <div class="print-page-indicator"></div>
+    </section>
+
+    <section class="story-card" id="card-2" data-title="Agenda">
+        <div class="print-bg"></div>
+        <div class="card-content flex flex-col items-center">
+            <h2 class="text-3xl font-bold text-center mb-2 accent-text">Agenda: Überblick der KI-Potenziale</h2>
+            <p class="text-center mb-4 light-text">Interaktive Gliederung der Themen, die wir heute gemeinsam erkunden
+                werden</p>
+            <div id="d3-container" class="interactive-container"></div>
+        </div>
+        <div class="print-page-indicator"></div>
+    </section>
+
+    <section class="story-card" id="card-3" data-title="KI-Arten">
+        <div class="print-bg"></div>
+        <div class="card-content flex flex-col items-center">
+            <h2 class="text-3xl font-bold text-center mb-2 accent-text">Berührungspunkte mit Künstlicher Intelligenz
+            </h2>
+            <p class="text-center mb-4 light-text">Übersicht alltäglicher und spezialisierter KI-Anwendungen</p>
+            <div id="ai-carousel-scene">
+                <div id="left-zone">
+                    <ul class="list">
+                        <li class="item">
+                            <input type="radio" id="radio_text" name="ai_carousel" value="text" checked>
+                            <label for="radio_text"><i data-lucide="file-text" class="icon"></i> Text</label>
+                            <div class="content content_text">
+                                <i data-lucide="file-text" class="picto"></i>
+                                <h1>Text</h1>
+                                <p>KI-Modelle wie ChatGPT erzeugen menschenähnliche Texte, beantworten komplexe Fragen
+                                    und fassen Informationen zusammen.</p>
+                                <a href="https://marketplace.canva.com/p0gDY/MAGZTHp0gDY/1/s2/canva-close-up-of-a-smartphone-displaying-a-conversation-with-chatgpt-MAGZTHp0gDY.jpg"
+                                    target="_blank" rel="noopener noreferrer"
+                                    class="image-attribution content-attribution">© Canva</a>
+                            </div>
+                        </li>
+                        <li class="item">
+                            <input type="radio" id="radio_image" name="ai_carousel" value="image">
+                            <label for="radio_image"><i data-lucide="image" class="icon"></i> Bild</label>
+                            <div class="content content_image">
+                                <i data-lucide="image" class="picto"></i>
+                                <h1>Bild</h1>
+                                <p>Modelle wie DALL-E oder Midjourney erstellen aus Textbeschreibungen fotorealistische
+                                    Bilder, Grafiken und Kunstwerke.</p>
+                                <a href="https://media.canva.com/v2/files/uri:ifs%3A%2F%2FM%2F825aeab6-e5fc-4f77-a305-cb70ba5aa69f?csig=AAAAAAAAAAAAAAAAAAAAANjXuzlhKlg15H6xqcL0SzT6XZOVo2zEnJ9vreAxwA6Q&exp=1756918581&signer=media-rpc&token=AAIAAU0AJDgyNWFlYWI2LWU1ZmMtNGY3Ny1hMzA1LWNiNzBiYTVhYTY5ZgAAAAABmRCCBwg1-A00n_OQwoMGWs9vsE_jC8_J44Bx-0EUMUp7UltV1w"
+                                    target="_blank" rel="noopener noreferrer"
+                                    class="image-attribution content-attribution">© Canva</a>
+                            </div>
+                        </li>
+                        <li class="item">
+                            <input type="radio" id="radio_audio" name="ai_carousel" value="audio">
+                            <label for="radio_audio"><i data-lucide="audio-lines" class="icon"></i> Audio</label>
+                            <div class="content content_audio">
+                                <i data-lucide="audio-lines" class="picto"></i>
+                                <h1>Audio</h1>
+                                <p>KI kann gesprochene Sprache transkribieren (Whisper) oder geschriebenen Text in eine
+                                    natürliche Stimme umwandeln (Text-to-Speech).</p>
+                                <a href="https://media.canva.com/v2/files/uri:ifs%3A%2F%2FM%2FjW9llyLA256Ee0YrU-5UW0TVACcAkB_gc_u1niPjACg.jpg?csig=AAAAAAAAAAAAAAAAAAAAAD6u8E58JRxptPb9ZlOQsa_YmE_7pLG7po5hL58ny6y0&exp=1756917241&signer=media-rpc&token=AAIAAU0AL2pXOWxseUxBMjU2RWUwWXJVLTVVVzBUVkFDY0FrQl9nY191MW5pUGpBQ2cuanBnAAAAAAGZEG2UqJoQbX_nLq-y1Pn7zKXUfaMh10Fk9JK9lISNmT6gssZG"
+                                    target="_blank" rel="noopener noreferrer"
+                                    class="image-attribution content-attribution">© Canva</a>
+                            </div>
+                        </li>
+                        <li class="item">
+                            <input type="radio" id="radio_video" name="ai_carousel" value="video">
+                            <label for="radio_video"><i data-lucide="film" class="icon"></i> Video</label>
+                            <div class="content content_video">
+                                <i data-lucide="film" class="picto"></i>
+                                <h1>Video</h1>
+                                <p>Neueste Modelle wie Sora oder Veo erzeugen aus Texteingaben ganze Videoszenen oder
+                                    analysieren bestehendes Videomaterial.</p>
+                                <a href="https://marketplace.canva.com/wsqbQ/MAEFkBwsqbQ/1/s2/canva-film-MAEFkBwsqbQ.jpg"
+                                    target="_blank" rel="noopener noreferrer"
+                                    class="image-attribution content-attribution">© Canva</a>
+                            </div>
+                        </li>
+                        <li class="item">
+                            <input type="radio" id="radio_coding" name="ai_carousel" value="coding">
+                            <label for="radio_coding"><i data-lucide="terminal" class="icon"></i> Coding</label>
+                            <div class="content content_coding">
+                                <i data-lucide="terminal" class="picto"></i>
+                                <h1>Coding</h1>
+                                <p>Werkzeuge wie GitHub Copilot unterstützen Entwickler, indem sie Code vorschlagen,
+                                    vervollständigen und Fehler analysieren.</p>
+                                <a href="https://marketplace.canva.com/MADGyPe05aQ/4/screen_2x/canva-close-up-photo-of-programming-of-codes-MADGyPe05aQ.jpg"
+                                    target="_blank" rel="noopener noreferrer"
+                                    class="image-attribution content-attribution">© Canva</a>
+                            </div>
+                        </li>
+                        <li class="item">
+                            <input type="radio" id="radio_data" name="ai_carousel" value="data">
+                            <label for="radio_data"><i data-lucide="message-square-diff" class="icon"></i>
+                                Datenanalyse</label>
+                            <div class="content content_data">
+                                <i data-lucide="message-square-diff" class="picto"></i>
+                                <h1>Datenanalyse</h1>
+                                <p>KI erkennt Muster und Zusammenhänge in großen Datenmengen (Business Intelligence) und
+                                    unterstützt bei der Aufbereitung.</p>
+                                <a href="https://marketplace.canva.com/MADGw941Xqk/6/screen_2x/canva-black-samsung-tablet-computer-MADGw941Xqk.jpg"
+                                    target="_blank" rel="noopener noreferrer"
+                                    class="image-attribution content-attribution">© Canva</a>
+                            </div>
+                        </li>
+                        <li class="item">
+                            <input type="radio" id="radio_predictions" name="ai_carousel" value="predictions">
+                            <label for="radio_predictions"><i data-lucide="chart-no-axes-combined" class="icon"></i>
+                                Prognosen</label>
+                            <div class="content content_predictions">
+                                <i data-lucide="chart-no-axes-combined" class="picto"></i>
+                                <h1>Prognosen</h1>
+                                <p>Durch die Analyse historischer Daten erstellen KI&#8209;Modelle Vorhersagen für
+                                    zukünftige Trends, z.B. in Finanzen oder Wetter (Forecasting).</p>
+                                <a href="https://media.canva.com/v2/files/uri:ifs%3A%2F%2FM%2FeGHsqVEk09R4mFufgaDyzr0QaICqhA22DfsgajHTtag.jpg?csig=AAAAAAAAAAAAAAAAAAAAAM6lttTyMdGanfNSaL2uXplQa0a2I-lUfUv1edYQpU1X&exp=1756919374&signer=media-rpc&token=AAIAAU0AL2VHSHNxVkVrMDlSNG1GdWZnYUR5enIwUWFJQ3FoQTIyRGZzZ2FqSFR0YWcuanBnAAAAAAGZEI4gsPDN4mMjNbJ90VdaSirpkPgp6NxtAyIQLECLtjZzRpoJ"
+                                    target="_blank" rel="noopener noreferrer"
+                                    class="image-attribution content-attribution">© Canva</a>
+                            </div>
+                        </li>
+                        <li class="item">
+                            <input type="radio" id="radio_robotics" name="ai_carousel" value="robotics">
+                            <label for="radio_robotics"><i data-lucide="bot" class="icon"></i> Robotik</label>
+                            <div class="content content_robotics">
+                                <i data-lucide="bot" class="picto"></i>
+                                <h1>Robotik</h1>
+                                <p>KI steuert physische Roboter, die in der Fertigung, Logistik oder im Servicebereich
+                                    autonom komplexe Aufgaben ausführen.</p>
+                                <a href="https://media.canva.com/v2/files/uri:ifs%3A%2F%2FM%2FXyEiNiVKHvm-AbiLPsZb9Wuoi3Q-G9qQKgnLlYhIX-c.jpg?csig=AAAAAAAAAAAAAAAAAAAAACi85IcCDzl02vnXT1gJm5WT37Mrm-mZhnz_FWyI3qr5&exp=1756922464&signer=media-rpc&token=AAIAAU0AL1h5RWlOaVZLSHZtLUFiaUxQc1piOVd1b2kzUS1HOXFRS2duTGxZaElYLWMuanBnAAAAAAGZEL1HAPevPeDq2O1cRr7Rg41IVVmdwrERbcn0-wN50o7myYGG"
+                                    target="_blank" rel="noopener noreferrer"
+                                    class="image-attribution content-attribution">© Canva</a>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                <div id="middle-border"></div>
+            </div>
+        </div>
+        <div class="print-page-indicator"></div>
+    </section>
+
+    <section class="story-card" id="card-4" data-title="Extraktion">
+        <div class="print-bg"></div>
+        <div class="card-content">
+            <div class="flex justify-center mb-2"><i data-lucide="scan-search" class="w-12 h-12 text-green-400"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-center mb-2 accent-text">Erdbeobachtung mit Argusaugen</h2>
+            <p class="text-base text-center light-text mb-4">KI kann Objekte wie Gebäude, Vegetation oder Gewässer in
+                Luft- und
+                Satellitenbildern automatisch erkennen und klassifizieren.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-center">
+                <div id="geo-deep-kachel" data-modal-id="carousel-geodeep"
+                    class="p-4 bg-white/5 rounded-xl border info-kachel cursor-pointer overflow-hidden text-left">
+                    <div class="aspect-video w-full mb-3 rounded-lg overflow-hidden bg-black/20">
+                        <img data-media-key="4-1" class="w-full h-full object-cover media-fallback"
+                            alt="GeoDeep Preview">
+                    </div>
+                    <h3 class="font-bold text-green-400 mb-1">GeoDeep</h3>
+                    <p class="text-xs text-light-text">Erkennt spezifische Objekte in Rasterbildern</p>
+                </div>
+                <div id="geovision-kachel" data-modal-id="modal-geovision"
+                    class="p-4 bg-white/5 rounded-xl border info-kachel cursor-pointer overflow-hidden text-left">
+                    <div class="aspect-video w-full mb-3 rounded-lg overflow-hidden bg-black/20">
+                        <img data-media-key="4-4" class="w-full h-full object-cover media-fallback"
+                            alt="GeoVision Labeler Preview">
+                    </div>
+                    <h3 class="font-bold text-green-400 mb-1">GeoVision Labeler</h3>
+                    <p class="text-xs text-light-text">Klassifiziert Bilder ohne Trainingsdaten</p>
+                </div>
+            </div>
+            <div class="nutzen-box mt-auto">
+                <i data-lucide="scan" class="w-7 h-7 mr-2"></i>
+                <p class="text-sm">Schnellere Aktualisierung von DLM & ATKIS, Detektion von Veränderungen</p>
+            </div>
+        </div>
+        <div class="print-page-indicator"></div>
+    </section>
+
+    <section class="story-card" id="card-5" data-title="QGIS">
+        <div class="print-bg"></div>
+        <div class="card-content">
+            <div class="flex justify-center mb-2"><i data-lucide="puzzle" class="w-12 h-12 text-sky-400"></i></div>
+            <h2 class="text-2xl font-bold text-center mb-2 accent-text">QGIS wird intelligenter</h2>
+            <p class="text-base text-center light-text mb-4">Plugins und Protokoll-Anbindungen bringen neue
+                leistungsstarke
+                KI-Funktionen direkt in gewohnte Arbeitsumgebungen und steigern die Effizienz.</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                <div id="vectorizer-kachel" data-modal-id="modal-vectorizer"
+                    class="p-4 bg-white/5 rounded-xl border info-kachel cursor-pointer overflow-hidden text-left">
+                    <div class="aspect-video w-full mb-3 rounded-lg overflow-hidden bg-black/20">
+                        <img data-media-key="5-1" data-preview-only="true"
+                            class="w-full h-full object-cover media-fallback" alt="Vectorizer Preview">
+                    </div>
+                    <h3 class="font-bold text-sky-400 mb-1">AI Vectorizer</h3>
+                    <p class="text-xs text-light-text">Digitalisierung von Rasterbildern</p>
+                </div>
+                <div id="deepness-kachel" data-modal-id="modal-deepness"
+                    class="p-4 bg-white/5 rounded-xl border info-kachel cursor-pointer overflow-hidden text-left">
+                    <div class="aspect-video w-full mb-3 rounded-lg overflow-hidden bg-black/20">
+                        <video data-media-key="5-2" data-preview-only="true"
+                            class="w-full h-full object-cover media-fallback" muted playsinline></video>
+                    </div>
+                    <h3 class="font-bold text-sky-400 mb-1">Deepness Plugin</h3>
+                    <p class="text-xs text-light-text">Deep Learning Objekterkennung</p>
+                </div>
+                <div id="qgismcp-kachel" data-modal-id="modal-qgismcp"
+                    class="p-4 bg-white/5 rounded-xl border info-kachel cursor-pointer overflow-hidden text-left">
+                    <div class="aspect-video w-full mb-3 rounded-lg overflow-hidden bg-black/20">
+                        <video data-media-key="5-3" data-preview-only="true"
+                            class="w-full h-full object-cover media-fallback" muted playsinline></video>
+                    </div>
+                    <h3 class="font-bold text-sky-400 mb-1">QGISMCP</h3>
+                    <p class="text-xs text-light-text">Steuerung via natürlicher Sprache</p>
+                </div>
+            </div>
+            <div class="nutzen-box mt-auto">
+                <i data-lucide="timer" class="w-7 h-7 mr-2"></i>
+                <p class="text-sm">Effiziente Digitalisierung von Bestandsdaten, barrierearmer Zugang zu GIS-Funktionen
+                </p>
+            </div>
+        </div>
+        <div class="print-page-indicator"></div>
+    </section>
+
+    <section class="story-card" id="card-6" data-title="LLMs">
+        <div class="print-bg"></div>
+        <div class="card-content">
+            <div class="flex justify-center mb-2"><i data-lucide="message-circle-code"
+                    class="w-12 h-12 text-amber-400"></i></div>
+            <h2 class="text-2xl font-bold text-center mb-2 accent-text">Direkt mit GIS kommunizieren?</h2>
+            <p class="text-base text-center light-text mb-4">Sprachmodelle übernehmen selbstständig komplexe
+                GIS-Aufgaben wie
+                Abfragen, Analysen und Kartenerstellung mittels natürlicher Sprache.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+                <div id="mundi-kachel" data-modal-id="modal-mundi"
+                    class="p-4 bg-white/5 rounded-xl border info-kachel cursor-pointer overflow-hidden text-left">
+                    <div class="aspect-video w-full mb-3 rounded-lg overflow-hidden bg-black/20">
+                        <img data-media-key="6-1" class="w-full h-full object-cover media-fallback" alt="Mundi Preview">
+                    </div>
+                    <h3 class="font-bold text-amber-400 mb-1">Mundi.ai</h3>
+                    <p class="text-xs text-light-text">Open-Source WebGIS mit KI-Steuerung</p>
+                </div>
+                <ul class="space-y-4 text-left pl-4">
+                    <li class="flex items-center text-base"><i data-lucide="check-circle-2"
+                            class="w-6 h-6 mr-3 text-amber-400"></i>Datenabfragen formulieren</li>
+                    <li class="flex items-center text-base"><i data-lucide="check-circle-2"
+                            class="w-6 h-6 mr-3 text-amber-400"></i>Analyse-Workflows erstellen</li>
+                    <li class="flex items-center text-base"><i data-lucide="check-circle-2"
+                            class="w-6 h-6 mr-3 text-amber-400"></i>Karten automatisch generieren</li>
+                </ul>
+            </div>
+            <div class="nutzen-box mt-auto">
+                <i data-lucide="users-round" class="w-7 h-7 mr-2"></i>
+                <p class="text-sm">Demokratisierung des Geodatenzugangs, Automatisierung von Routineaufgaben</p>
+            </div>
+        </div>
+        <div class="print-page-indicator"></div>
+    </section>
+
+    <section class="story-card" id="card-7" data-title="Daten">
+        <div class="print-bg"></div>
+        <div class="card-content">
+            <div class="flex justify-center mb-1"><i data-lucide="globe-2" class="w-12 h-12 text-violet-400"></i></div>
+            <h2 class="text-2xl font-bold text-center mb-1 accent-text">Datenschätze für smarte Analysen</h2>
+            <p class="text-base text-center light-text mb-4">Neuartige, KI-basierte Ansätze verändern die Arbeit mit
+                Erdbeobachtungsdaten. Anstatt Rohdaten aufzubereiten, können vorverarbeitete Satellitendaten mit »<a
+                    href="https://developers.google.com/machine-learning/crash-course/embeddings/embedding-space?hl=de"
+                    target="_blank" rel="noopener noreferrer"
+                    class="font-bold cursor-pointer underline decoration-dotted">Vektoreinbettungen</a>« genutzt
+                werden.</p>
+
+            <div id="alphaearth-kachel" data-modal-id="modal-alphaearth"
+                class="p-4 bg-white/5 rounded-xl border info-kachel cursor-pointer overflow-hidden text-left w-full max-w-5xl">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                    <div class="aspect-video rounded-lg overflow-hidden bg-black/20"><img data-media-key="7-1"
+                            class="w-full h-full object-cover media-fallback"></div>
+                    <div class="aspect-video rounded-lg overflow-hidden bg-black/20"><img data-media-key="7-2"
+                            class="w-full h-full object-cover media-fallback"></div>
+                    <div class="aspect-video rounded-lg overflow-hidden bg-black/20"><video data-media-key="7-3"
+                            data-preview-only="true" class="w-full h-full object-cover media-fallback" muted
+                            playsinline></video>
+                    </div>
+                </div>
+                <h3 class="font-bold text-violet-400 mb-1">AlphaEarth Foundations: Satellite Embedding V1</h3>
+                <p class="text-xs text-light-text">Datenmodell mit universellen, mehrdimensionalen "Einbettungen"
+                    globaler Satellitendaten, das sich für vielschichtige Analysen von Umweltveränderungen, Landnutzung
+                    oder Risikomanagement eignet.</p>
+            </div>
+
+            <div class="nutzen-box mt-auto">
+                <i data-lucide="brain-circuit" class="w-7 h-7 mr-2"></i>
+                <p class="text-sm">Beschleunigt Klassifizierungen und Auswertungen ohne rechenintensive Modellierung</p>
+            </div>
+        </div>
+        <div class="print-page-indicator"></div>
+    </section>
+
+
+    <section id="print-back-cover" class="story-card print-only">
+        <div class="print-bg"></div>
+        <div class="absolute bottom-0 left-0 right-0 p-6 flex justify-between items-center w-full">
+            <div class="print-info-bubble print-info-bubble-left">04.09.2025</div>
+            <div class="print-info-bubble print-info-bubble-right">Digitalagentur Sachsen | Stephan Büttig · Thomas
+                Schindler</div>
+        </div>
+    </section>
+
+    <div id="carousel-geodeep" class="carousel-overlay">
+        <div class="carousel-title">
+            <h3 class="font-bold text-2xl">GeoDeep</h3><a href="https://github.com/uav4geo/GeoDeep" target="_blank"
+                rel="noopener noreferrer" title="GeoDeep auf GitHub öffnen"><i data-lucide="arrow-up-right"
+                    class="w-5 h-5"></i></a>
+        </div>
+        <div class="carousel-container"></div>
+        <div class="carousel-caption">
+            <p class="text-sm">Open-Source-Python-Bibliothek zur KI-Objekterkennung und semantischen Segmentierung in
+                Rasterdaten (GeoTIFFs).</p>
+        </div>
+        <button class="carousel-close"><i data-lucide="x"></i></button>
+    </div>
+    <div id="carousel-geovision" class="carousel-overlay">
+        <div class="carousel-title">
+            <h3 class="font-bold text-2xl">GeoVision Labeler</h3><a
+                href="https://github.com/microsoft/geo-vision-labeler?tab=readme-ov-file" target="_blank"
+                rel="noopener noreferrer" title="GeoVision Labeler auf GitHub öffnen"><i data-lucide="arrow-up-right"
+                    class="w-5 h-5"></i></a>
+        </div>
+        <div class="carousel-container"></div>
+        <div class="carousel-caption">
+            <p class="text-sm">Es handelt sich um ein flexibles Werkzeug zur Bildbeschriftung. Visuelle Sprachmodelle
+                (vLLM) erzeugen detailreiche Bildbeschreibungen, die anschließend durch ein textbasiertes LLM in
+                benutzerdefinierte Klassenzuordnungen überführt werden.</p>
+        </div>
+        <button class="carousel-close"><i data-lucide="x"></i></button>
+    </div>
+    <div id="modal-vectorizer" class="carousel-overlay">
+        <div class="carousel-title">
+            <h3 class="font-bold text-2xl">AI Vectorizer Plugin</h3><a
+                href="https://buntinglabs.com/solutions/ai-vectorizer-qgis-plugin" target="_blank"
+                rel="noopener noreferrer" title="AI Vectorizer Plugin Webseite öffnen"><i data-lucide="arrow-up-right"
+                    class="w-5 h-5"></i></a>
+        </div>
+        <div class="carousel-container"></div>
+        <div class="carousel-caption">
+            <p class="text-sm">Die KI-gestützte automatische Vektorisierung beschleunigt die Digitalisierung von Linien
+                und Polygonen aus Rasterbildern.</p>
+        </div>
+        <button class="carousel-close"><i data-lucide="x"></i></button>
+    </div>
+    <div id="modal-deepness" class="carousel-overlay">
+        <div class="carousel-title">
+            <h3 class="font-bold text-2xl">Deepness Plugin</h3><a
+                href="https://qgis-plugin-deepness.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer"
+                title="Deepness Plugin auf GitHub öffnen"><i data-lucide="arrow-up-right" class="w-5 h-5"></i></a>
+        </div>
+        <div class="carousel-container"></div>
+        <div class="carousel-caption">
+            <p class="text-sm">Das Deepness-Plugin ermöglicht die einfache Segmentierung, Erkennung und Regression von
+                Raster-Orthofotos mittels individualisierter neuronaler Netzwerke.</p>
+        </div>
+        <button class="carousel-close"><i data-lucide="x"></i></button>
+    </div>
+    <div id="modal-qgismcp" class="carousel-overlay">
+        <div class="carousel-title">
+            <h3 class="font-bold text-2xl">QGISMCP (Model Context Protocol)</h3><a
+                href="https://github.com/jjsantos01/qgis_mcp" target="_blank" rel="noopener noreferrer"
+                title="QGISMCP auf GitHub öffnen"><i data-lucide="arrow-up-right" class="w-5 h-5"></i></a>
+        </div>
+        <div class="carousel-container"></div>
+        <div class="carousel-caption">
+            <p class="text-sm">QGISMCP verbindet QGIS mit Claude AI über das Model Context Protocol (MCP). Claude kann
+                QGIS direkt steuern, um Projekte zu erstellen, Layer zu laden und Code auszuführen.</p>
+        </div>
+        <button class="carousel-close"><i data-lucide="x"></i></button>
+    </div>
+    <div id="modal-mundi" class="carousel-overlay">
+        <div class="carousel-title">
+            <h3 class="font-bold text-2xl">Mundi.ai</h3><a href="https://app.mundi.ai" target="_blank"
+                rel="noopener noreferrer" title="Mundi.ai Webseite öffnen"><i data-lucide="arrow-up-right"
+                    class="w-5 h-5"></i></a>
+        </div>
+        <div class="carousel-container"></div>
+        <div class="carousel-caption">
+            <p class="text-sm">Mundi ist ein Open-Source WebGIS mit lokaler KI-Integration. Es verarbeitet Vektor-,
+                Raster- und Punktwolkendaten und kann räumliche Datenbanken wie PostGIS abfragen. Dank
+                Open-Source-Modellen wie GPT-OSS läuft Mundi komplett lokal.</p>
+        </div>
+        <button class="carousel-close"><i data-lucide="x"></i></button>
+    </div>
+    <div id="modal-alphaearth" class="carousel-overlay">
+        <div class="carousel-title">
+            <h3 class="font-bold text-2xl" style="white-space: nowrap;">AlphaEarth Foundations: Satellite Embedding V1
+            </h3><a
+                href="https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_SATELLITE_EMBEDDING_V1_ANNUAL?hl=de"
+                target="_blank" rel="noopener noreferrer" title="AlphaEarth auf Google Earth Engine öffnen"><i
+                    data-lucide="arrow-up-right" class="w-5 h-5"></i></a>
+        </div>
+        <div class="carousel-container"></div>
+        <div class="carousel-caption">
+            <p class="text-sm">Der Datensatz "Satellite Embedding V1" der AlphaEarth Foundation liefert eine weltweite
+                Karte in 10 m Auflösung mit 64-dimensionalen Feature-Vektoren ("Embedding"). Diese Vektoren bündeln
+                Informationen aus Sensoren als "Fingerabdrücke" und erlauben neuartige raumbezogene Auswertungen ohne
+                eigene aufwendige Datenfusion.</p>
+        </div>
+        <button class="carousel-close"><i data-lucide="x"></i></button>
+    </div>
+
+    <script>
+        const Presentation = {
+            nodes: {},
+            interactiveElements: {},
+            presentationSequence: [],
+            currentStepIndex: 0,
+            isProgrammaticScroll: false,
+            collapseTimer: null,
+
+            localMediaConfig: {
+                // key: [onlineSrc, localSrc]
+                // Backgrounds
+                "1-0": ["https://geoportal.sachsen.de/portal/images/slide/slide-bg-879-295.png", "data/1-0.png"],
+                "2-0": ["https://www.canva.com/design/DAGxixpW-Gg/miQ6ejyYQVvQPWlzO0315A/view?embed", "data/2-0.png"],
+                "3-0": ["https://www.canva.com/design/DAGxixpW-Gg/miQ6ejyYQVvQPWlzO0315A/view?embed", "data/3-0.png"],
+                "4-0": ["https://www.canva.com/design/DAGxixpW-Gg/miQ6ejyYQVvQPWlzO0315A/view?embed", "data/4-0.png"],
+                "5-0": ["https://www.canva.com/design/DAGxixpW-Gg/miQ6ejyYQVvQPWlzO0315A/view?embed", "data/5-0.png"],
+                "6-0": ["https://www.canva.com/design/DAGxixpW-Gg/miQ6ejyYQVvQPWlzO0315A/view?embed", "data/6-0.png"],
+                "7-0": ["https://www.canva.com/design/DAGxixpW-Gg/miQ6ejyYQVvQPWlzO0315A/view?embed", "data/7-0.png"],
+                // Content Images
+                "1-1": ["https://www.arbeitsplatz-erde.de/wp-content/uploads/2024/10/SMR_Landesamt-Geobasisinformation_2024_Web_de.png", "data/1-1.svg"],
+                "3-1": ["https://images.unsplash.com/photo-1589998059171-988d887df646?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb", "data/3-1.jpg"],
+                "3-2": ["https://media.canva.com/v2/files/uri:ifs%3A%2F%2FM%2F825aeab6-e5fc-4f77-a305-cb70ba5aa69f?csig=AAAAAAAAAAAAAAAAAAAAANjXuzlhKlg15H6xqcL0SzT6XZOVo2zEnJ9vreAxwA6Q&exp=1756918581&signer=media-rpc&token=AAIAAU0AJDgyNWFlYWI2LWU1ZmMtNGY3Ny1hMzA1LWNiNzBiYTVhYTY5ZgAAAAABmRCCBwg1-A00n_OQwoMGWs9vsE_jC8_J44Bx-0EUMUp7UltV1w", "data/3-2.jpg"],
+                "3-3": ["https://media.canva.com/v2/files/uri:ifs%3A%2F%2FM%2FjW9llyLA256Ee0YrU-5UW0TVACcAkB_gc_u1niPjACg.jpg?csig=AAAAAAAAAAAAAAAAAAAAAD6u8E58JRxptPb9ZlOQsa_YmE_7pLG7po5hL58ny6y0&exp=1756917241&signer=media-rpc&token=AAIAAU0AL2pXOWxseUxBMjU2RWUwWXJVLTVVVzBUVkFDY0FrQl9nY191MW5pUGpBQ2cuanBnAAAAAAGZEG2UqJoQbX_nLq-y1Pn7zKXUfaMh10Fk9JK9lISNmT6gssZG", "data/3-3.jpg"],
+                "3-4": ["https://images.unsplash.com/photo-1517604931442-7e0c8ed2963e?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb", "data/3-4.jpg"],
+                "3-5": ["https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb", "data/3-5.jpg"],
+                "3-6": ["https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb", "data/3-6.jpg"],
+                "3-7": ["https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb", "data/3-7.jpg"],
+                "3-8": ["https://images.unsplash.com/photo-1581092921462-20c2eada6f12?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb", "data/3-8.jpg"],
+                "4-1": ["https://github.com/user-attachments/assets/9dc7b98b-9233-458b-976e-c619c3a608cf", "data/4-1.png"],
+                "4-2": ["https://github.com/user-attachments/assets/2d7889e9-77f4-48e1-bbcd-994a9c6a4853", "data/4-2.png"],
+                "4-3": ["https://github.com/user-attachments/assets/2ae8603e-e251-4a9a-aedd-a19273e229e8", "data/4-3.png"],
+                "4-4": ["https://github.com/microsoft/geo-vision-labeler/raw/main/pipeline.png", "data/4-4.png"],
+                "4-5": ["https://arxiv.org/html/2505.24340v1/extracted/6494928/images/class_clustering.png", "data/4-5.png"],
+                "4-6": ["https://arxiv.org/html/2505.24340v1/extracted/6494928/images/ucm_class_clustering.png", "data/4-6.png"],
+                "5-1": ["https://github.com/BuntingLabs/buntinglabs-qgis-plugin/raw/master/assets/example.gif", "data/5-1.gif"],
+                "5-2": ["https://www.canva.com/design/DAGx0R97Tm8/g09ZICzUxF3vuEe5nyoFmw/watch?embed&autoplay=1", "data/5-2.mp4"],
+                "5-3": ["https://www.canva.com/design/DAGx0dKbOrU/ZN-VgWKR8BAe1F-K_dft2A/watch?embed&autoplay=1", "data/5-3.mp4"],
+                "6-1": ["https://pbs.twimg.com/media/GxnIURTawAEPPFj?format=jpg&name=large", "data/6-1.jpg"],
+                "7-1": ["https://pbs.twimg.com/media/GxHK_8cWwAAL_P1?format=jpg&name=large", "data/7-1.jpg"],
+                "7-2": ["https://lh3.googleusercontent.com/yJtLfR2Zn9bPGKaBJhy2KJMxtgKqpPjC3Fomgw1PCut1aiMXDkWNczlAzDZx6LqTH0qe8QRzVM52BIEMU4RZVH5zIlxzYcUf6nmdElCIQzVV8EsSkQ=w1232-rw", "data/7-2.jpg"],
+                "7-3": ["https://www.canva.com/design/DAGx0dEdBdw/4T0HXfBgV00HlhwrQLtYmg/watch?embed&autoplay=1", "data/7-3.mp4"],
+            },
+
+            init() {
+                this.cacheDomNodes();
+                this.initSettings();
+                this.initDynamicBackgrounds();
+                this.applyMediaFallbacks();
+                this.setupCards();
+                this.initEventListeners();
+                lucide.createIcons();
+
+                // Set initial background
+                if (this.nodes.backgrounds.length > 0) {
+                    this.nodes.backgrounds[0].style.opacity = 1;
+                }
+
+                // Preloader logic
+                window.addEventListener('load', () => {
+                    setTimeout(() => {
+                        this.nodes.body.classList.remove('loading');
+                        document.getElementById('loading-screen').classList.add('hidden');
+                    }, 500);
+                });
+            },
+
+            cacheDomNodes() {
+                this.nodes.htmlEl = document.documentElement;
+                this.nodes.body = document.body;
+                this.nodes.cards = document.querySelectorAll('.story-card');
+                this.nodes.backgrounds = document.querySelectorAll('#background-container .parallax-bg');
+                this.nodes.navContainer = document.getElementById('chapter-nav');
+                this.nodes.settingsContainer = document.getElementById('settings-container');
+                this.nodes.expanderButton = document.getElementById('expander-button');
+                this.nodes.themeToggle = document.getElementById('theme-toggle');
+                this.nodes.colorPicker = document.getElementById('color-picker');
+                this.nodes.printButton = document.getElementById('print-button');
+                this.nodes.opacitySlider = document.getElementById('opacity-slider');
+                this.nodes.opacityInput = document.getElementById('opacity-input');
+                this.nodes.cdToggleButton = document.getElementById('cd-toggle-button');
+            },
+
+            initSettings() {
+                this.setTheme(localStorage.getItem('theme') || 'light');
+                this.applyAccentColor(localStorage.getItem('accentColor') || '#0672A2');
+                this.applyOpacity(parseFloat(localStorage.getItem('bgOpacity') || '0.15'));
+                this.setCorporateDesign(localStorage.getItem('corporateDesign') === 'true');
+            },
+
+            setupCards() {
+                const cardObserver = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) this.handleVisibleCard(entry.target);
+                        else entry.target.classList.remove('is-visible');
+                    });
+                }, { threshold: 0.4 });
+
+                this.nodes.cards.forEach((card, cardIndex) => {
+                    if (card.id === 'print-back-cover') return;
+                    const navLink = document.createElement('a');
+                    navLink.href = `#${card.id}`;
+                    navLink.dataset.targetId = card.id;
+                    navLink.innerHTML = `<span>${cardIndex + 1}</span>`;
+                    this.nodes.navContainer.appendChild(navLink);
+                    cardObserver.observe(card);
+                    this.buildPresentationSequenceForCard(card, cardIndex);
+                });
+
+                this.nodes.navLinks = this.nodes.navContainer.querySelectorAll('a');
+
+                document.querySelectorAll('.info-kachel[data-modal-id]').forEach(triggerEl => {
+                    this.initCarousel(triggerEl);
+                });
+            },
+
+            initEventListeners() {
+                this.nodes.expanderButton.addEventListener('mouseover', () => {
+                    this.nodes.settingsContainer.classList.add('expanded');
+                    clearTimeout(this.collapseTimer);
+                });
+                this.nodes.settingsContainer.addEventListener('mouseenter', () => clearTimeout(this.collapseTimer));
+                this.nodes.settingsContainer.addEventListener('mouseleave', () => {
+                    this.collapseTimer = setTimeout(() => this.nodes.settingsContainer.classList.remove('expanded'), 500);
+                });
+
+                this.nodes.themeToggle.addEventListener('change', (e) => this.setTheme(e.target.checked ? 'light' : 'dark'));
+                this.nodes.colorPicker.addEventListener('input', (e) => this.applyAccentColor(e.target.value));
+                this.nodes.opacitySlider.addEventListener('input', (e) => this.applyOpacity(parseFloat(e.target.value)));
+                this.nodes.opacityInput.addEventListener('change', (e) => {
+                    let value = parseInt(e.target.value, 10);
+                    if (!isNaN(value)) this.applyOpacity(Math.max(0, Math.min(100, value)) / 100);
+                });
+                this.nodes.cdToggleButton.addEventListener('click', () => this.setCorporateDesign(!this.nodes.htmlEl.classList.contains('corporate-design-active')));
+                this.nodes.printButton.addEventListener('click', () => this.prepareAndPrint());
+
+                this.nodes.navLinks.forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const cardId = link.dataset.targetId;
+                        const newIndex = this.presentationSequence.findIndex(step => step.type === 'card' && step.targetId === cardId);
+                        if (newIndex !== -1) {
+                            this.currentStepIndex = newIndex;
+                            this.executeStep(this.currentStepIndex);
+                        }
+                    });
+                });
+
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'PageUp' || e.key === 'ArrowUp') {
+                        e.preventDefault(); this.handleFastNav(-1);
+                    } else if (e.key === ' ' || e.key === 'ArrowDown') {
+                        if (document.body.classList.contains('modal-open')) return;
+                        e.preventDefault(); this.handleFastNav(1);
+                    } else if (e.key === 'PageDown' || e.key === 'ArrowRight') {
+                        e.preventDefault(); this.handleStepNav(1);
+                    } else if (e.key === 'ArrowLeft') {
+                        e.preventDefault(); this.handleStepNav(-1);
+                    }
+                });
+            },
+
+            handleVisibleCard(cardEl) {
+                cardEl.classList.add('is-visible');
+                const cardId = cardEl.id;
+
+                // Unified Preview Management
+                cardEl.querySelectorAll('[data-preview-only="true"]').forEach(el => {
+                    if (el.previewTimer) clearTimeout(el.previewTimer);
+
+                    // Cleanup previous canvas freezes if any
+                    const container = el.parentElement;
+                    const oldCanvas = container.querySelector('.freeze-canvas');
+                    if (oldCanvas) oldCanvas.remove();
+                    el.style.opacity = '1'; // Ensure original image is visible initially
+                    container.classList.remove('relative', 'overflow-hidden'); // Clean up container classes too
+
+                    if (el.tagName === 'VIDEO') {
+                        el.currentTime = 0;
+                        el.play().then(() => {
+                            el.previewTimer = setTimeout(() => {
+                                if (cardEl.classList.contains('is-visible')) el.pause();
+                            }, 2000);
+                        }).catch(() => { });
+                    } else if (el.tagName === 'IMG') {
+                        // For GIFs, we use a canvas swap to guarantee a stop
+                        const handleFreeze = () => {
+                            if (el.src && el.src.toLowerCase().includes('.gif')) {
+                                el.previewTimer = setTimeout(() => {
+                                    if (cardEl.classList.contains('is-visible') && el.complete) {
+                                        try {
+                                            const canvas = document.createElement('canvas');
+                                            canvas.className = 'freeze-canvas absolute inset-0 w-full h-full object-cover pointer-events-none';
+                                            canvas.width = el.naturalWidth;
+                                            canvas.height = el.naturalHeight;
+                                            canvas.getContext('2d').drawImage(el, 0, 0);
+
+                                            // Ensure container is relative for absolute canvas
+                                            container.classList.add('relative', 'overflow-hidden');
+                                            container.appendChild(canvas);
+                                            el.style.opacity = '0'; // Hide the running GIF
+                                        } catch (e) { console.warn("GIF Freeze Error", e); }
+                                    }
+                                }, 2000);
+                            }
+                        };
+                        if (el.complete) handleFreeze();
+                        else el.onload = handleFreeze;
+                    }
+                });
+
+                if (!this.isProgrammaticScroll) {
+                    const newIndex = this.presentationSequence.findIndex(step => step.type === 'card' && step.targetId === cardId);
+                    if (newIndex !== -1) {
+                        this.currentStepIndex = newIndex;
+                        document.querySelectorAll('.reveal-item.revealed, .checklist-item.checked').forEach(el => el.classList.remove('revealed', 'checked'));
+                        const carousel = document.getElementById('radio_text');
+                        if (carousel) carousel.checked = true;
+                    }
+                }
+
+                this.nodes.navLinks.forEach(link => link.classList.toggle('active', link.dataset.targetId === cardId));
+
+                const mediaKey = cardId.replace('card-', '') + '-0';
+                this.nodes.backgrounds.forEach(bg => {
+                    const isActive = bg.dataset.mediaKey === mediaKey;
+                    if (isActive) {
+                        const isSpecialCard = cardId === 'card-1';
+                        bg.style.opacity = isSpecialCard ? 1 : this.nodes.htmlEl.style.getPropertyValue('--bg-image-opacity');
+                    } else {
+                        bg.style.opacity = 0;
+                    }
+                });
+
+                document.querySelectorAll('#fixed-attributions .image-attribution').forEach(attr => {
+                    attr.style.opacity = attr.dataset.attributionFor === cardId ? 1 : 0;
+                });
+
+                this.nodes.settingsContainer.classList.toggle('visible', cardId === 'card-1');
+                if (cardId !== 'card-1') this.nodes.settingsContainer.classList.remove('expanded');
+
+                if (cardId === 'card-2' && !cardEl.dataset.d3Initialized) {
+                    this.initializeD3Graph(document.getElementById('d3-container'));
+                    cardEl.dataset.d3Initialized = 'true';
+                }
+            },
+
+            buildPresentationSequenceForCard(card, cardIndex) {
+                const sequenceConfig = {
+                    'card-3': { carousel: true }
+                };
+
+                this.presentationSequence.push({ type: 'card', targetId: card.id, cardIndex });
+
+                card.querySelectorAll('.info-kachel[data-modal-id]').forEach(kachel => {
+                    const modalId = kachel.dataset.modalId;
+                    this.presentationSequence.push({ type: 'open-modal', cardIndex, targetId: modalId, triggerId: kachel.id });
+                    this.presentationSequence.push({ type: 'close-modal', cardIndex, targetId: modalId });
+                });
+
+                const config = sequenceConfig[card.id];
+                if (!config) return;
+
+                if (config.carousel) card.querySelectorAll('#ai-carousel-scene input[type="radio"]').forEach((radio, i) => { if (i > 0) this.presentationSequence.push({ type: 'carousel-step', cardIndex, radioId: radio.id }) });
+            },
+
+            executeStep(stepIndex) {
+                const step = this.presentationSequence[stepIndex];
+                if (!step) return;
+
+                if (step.type !== 'open-modal') Object.values(this.interactiveElements).forEach(el => el.hide());
+
+                switch (step.type) {
+                    case 'card':
+                        this.isProgrammaticScroll = true;
+                        const targetCard = document.getElementById(step.targetId);
+                        targetCard?.scrollIntoView({ behavior: 'smooth' });
+                        document.querySelectorAll('.reveal-item.revealed, .checklist-item.checked').forEach(el => el.classList.remove('revealed', 'checked'));
+                        const carousel = document.getElementById('radio_text');
+                        if (carousel) carousel.checked = true;
+                        setTimeout(() => this.isProgrammaticScroll = false, 800);
+                        break;
+                    case 'carousel-step':
+                        const radio = document.getElementById(step.radioId);
+                        if (radio) radio.checked = true;
+                        break;
+                    case 'reveal-item':
+                        document.getElementById(step.itemTargetId)?.classList.add('revealed');
+                        break;
+                    case 'open-modal':
+                        this.interactiveElements[step.targetId]?.show();
+                        const trigger = document.getElementById(step.triggerId);
+                        if (trigger) {
+                            trigger.classList.add('presenter-highlight');
+                            setTimeout(() => trigger.classList.remove('presenter-highlight'), 1000);
+                        }
+                        break;
+                    case 'close-modal':
+                        this.interactiveElements[step.targetId]?.hide();
+                        break;
+                }
+            },
+
+            handleFastNav(direction) {
+                const currentCardIndex = this.presentationSequence[this.currentStepIndex].cardIndex;
+                const nextCardIndex = currentCardIndex + direction;
+
+                const targetStep = this.presentationSequence.find(step => step.type === 'card' && step.cardIndex === nextCardIndex);
+                if (targetStep) {
+                    this.currentStepIndex = this.presentationSequence.indexOf(targetStep);
+                    this.executeStep(this.currentStepIndex);
+                }
+            },
+
+            handleStepNav(direction) {
+                const newIndex = this.currentStepIndex + direction;
+                if (newIndex >= 0 && newIndex < this.presentationSequence.length) {
+                    this.currentStepIndex = newIndex;
+                    this.executeStep(this.currentStepIndex);
+                }
+            },
+
+            setTheme(theme) {
+                this.nodes.htmlEl.dataset.theme = theme;
+                localStorage.setItem('theme', theme);
+                this.nodes.themeToggle.checked = theme === 'light';
+                this.applyAccentColor(this.nodes.colorPicker.value);
+            },
+
+            applyAccentColor(color) {
+                const [r, g, b] = color.match(/\w\w/g).map(x => parseInt(x, 16));
+                const isLight = (r * 299 + g * 587 + b * 114) / 1000 >= 150;
+                this.nodes.htmlEl.style.setProperty('--accent-color', color);
+                this.nodes.htmlEl.style.setProperty('--accent-rgb', `${r}, ${g}, ${b}`);
+                this.nodes.htmlEl.style.setProperty('--accent-text-color', this.nodes.htmlEl.dataset.theme === 'light' ? this.shadeColor(color, -40) : this.shadeColor(color, 60));
+                this.nodes.htmlEl.style.setProperty('--nav-dot-text', isLight ? '#1e293b' : '#f8fafc');
+                localStorage.setItem('accentColor', color);
+                this.nodes.colorPicker.value = color;
+            },
+
+            applyOpacity(value) {
+                const clampedValue = Math.max(0, Math.min(1, value));
+                this.nodes.htmlEl.style.setProperty('--bg-image-opacity', clampedValue);
+                localStorage.setItem('bgOpacity', clampedValue);
+                this.nodes.opacitySlider.value = clampedValue;
+                this.nodes.opacityInput.value = Math.round(clampedValue * 100);
+
+                // Update currently visible background (not on card-1 which has full opacity)
+                const visibleCard = document.querySelector('.story-card.is-visible');
+                if (visibleCard && visibleCard.id !== 'card-1') {
+                    const mediaKey = visibleCard.id.replace('card-', '') + '-0';
+                    const activeBg = document.querySelector(`.parallax-bg[data-media-key="${mediaKey}"]`);
+                    if (activeBg) activeBg.style.opacity = clampedValue;
+                }
+            },
+
+            setCorporateDesign(isActive) {
+                this.nodes.htmlEl.classList.toggle('corporate-design-active', isActive);
+                this.nodes.cdToggleButton.classList.toggle('active', isActive);
+                localStorage.setItem('corporateDesign', isActive);
+            },
+
+            shadeColor(color, percent) {
+                let [r, g, b] = color.match(/\w\w/g).map(x => parseInt(x, 16));
+                r = Math.max(0, Math.min(255, Math.round(r * (100 + percent) / 100)));
+                g = Math.max(0, Math.min(255, Math.round(g * (100 + percent) / 100)));
+                b = Math.max(0, Math.min(255, Math.round(b * (100 + percent) / 100)));
+                return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+            },
+
+            initCarousel(triggerEl) {
+                const carouselData = {
+                    'carousel-geodeep': [{ key: '4-1', type: 'image', attribution: '© UAV4GEO/GeoDeep', link: 'https://github.com/uav4geo/GeoDeep' }, { key: '4-2', type: 'image', attribution: '© UAV4GEO / GeoDeep', link: 'https://github.com/uav4geo/GeoDeep' }, { key: '4-3', type: 'image', attribution: '© UAV4GEO/GeoDeep', link: 'https://github.com/uav4geo/GeoDeep' }],
+                    'carousel-geovision': [{ key: '4-4', type: 'image', attribution: '© Microsoft / Geo Vision Labeler', link: 'https://github.com/microsoft/geo-vision-labeler' }, { key: '4-5', type: 'image', attribution: '© Microsoft/Geo Vision Labeler', link: 'https://github.com/microsoft/geo-vision-labeler' }, { key: '4-6', type: 'image', attribution: '© Microsoft/Geo Vision Labeler', link: 'https://github.com/microsoft/geo-vision-labeler' }],
+                    'modal-vectorizer': [{ key: '5-1', type: 'image', duration: 8000, attribution: '© Bunting Labs', link: 'https://github.com/BuntingLabs/buntinglabs-qgis-plugin/tree/master' }],
+                    'modal-deepness': [{ key: '5-2', type: 'iframe', offlineType: 'video', duration: 18000, attribution: '© Deepness', link: 'https://qgis-plugin-deepness.readthedocs.io/en/latest/' }],
+                    'modal-qgismcp': [{ key: '5-3', type: 'iframe', offlineType: 'video', duration: 15000, attribution: '© Claus Hesseling / YouTube', link: 'https://github.com/jjsantos01/qgis_mcp' }],
+                    'modal-mundi': [{ key: '6-1', type: 'image', attribution: '© Michael Egan / LinkedIn', link: 'https://www.linkedin.com/posts/michael-egan-4941a4145_openais-new-open-models-are-huge-news-for-activity-7358554712033447936-VtJl/' }],
+                    'modal-alphaearth': [
+                        { key: '7-1', type: 'image', attribution: '© Google DeepMind / X', link: 'https://x.com/GoogleDeepMind/status/1950563700286398965' },
+                        { key: '7-2', type: 'image', attribution: '© Google DeepMind / X', link: 'https://x.com/GoogleDeepMind/status/1950563700286398965' },
+                        { key: '7-3', type: 'iframe', offlineType: 'video', duration: 23000, attribution: '© Google DeepMind / X', link: 'https://x.com/GoogleDeepMind/status/1950563700286398965' }
+                    ]
+                };
+                const modalId = triggerEl.dataset.modalId;
+                const items = carouselData[modalId];
+                const overlay = document.getElementById(modalId);
+                if (!overlay || !items) return;
+
+                const container = overlay.querySelector('.carousel-container');
+                const closeBtn = overlay.querySelector('.carousel-close');
+                let currentIndex = 0, previousIndex = 0, carouselTimeout;
+                let slides = [];
+
+                const createMediaElement = (itemData, useLocal) => {
+                    const [onlineSrc, localSrc] = this.localMediaConfig[itemData.key];
+                    const type = useLocal ? (itemData.offlineType || itemData.type) : itemData.type;
+                    const src = useLocal ? localSrc : onlineSrc;
+
+                    let mediaElement;
+                    switch (type) {
+                        case 'video':
+                            mediaElement = document.createElement('video');
+                            mediaElement.autoplay = true; mediaElement.loop = true; mediaElement.muted = true; mediaElement.playsinline = true;
+                            break;
+                        case 'iframe':
+                            mediaElement = document.createElement('iframe');
+                            mediaElement.setAttribute('frameborder', '0'); mediaElement.setAttribute('allowfullscreen', 'true'); mediaElement.setAttribute('allow', 'autoplay; fullscreen');
+                            break;
+                        case 'image':
+                        default:
+                            mediaElement = document.createElement('img');
+                            mediaElement.alt = "Beispielbild";
+                            break;
+                    }
+                    mediaElement.src = src;
+                    return mediaElement;
+                };
+
+                const buildSlides = () => {
+                    container.innerHTML = ''; // Ensure it's clean before building
+                    items.forEach((itemData) => {
+                        const slide = document.createElement('div');
+                        slide.className = 'carousel-slide';
+                        slide.dataset.interval = itemData.duration || 10000;
+
+                        const [onlineSrc, localSrc] = this.localMediaConfig[itemData.key];
+
+                        const handleMediaLoad = (useLocal) => {
+                            const media = createMediaElement(itemData, useLocal);
+                            slide.appendChild(media);
+                            if (slide.classList.contains('active')) {
+                                positionAttribution(slide);
+                                if (media.tagName === 'VIDEO') media.play().catch(() => { });
+                            }
+                        };
+
+                        if (localSrc && (localSrc.endsWith('.mp4') || itemData.offlineType === 'video')) {
+                            // Assume local video exists or test via video element
+                            handleMediaLoad(true);
+                        } else {
+                            const tester = new Image();
+                            tester.onload = () => handleMediaLoad(true);
+                            tester.onerror = () => handleMediaLoad(false);
+                            tester.src = localSrc || onlineSrc;
+                        }
+
+                        if (itemData.attribution) {
+                            const attrLink = document.createElement('a');
+                            attrLink.href = itemData.link || '#';
+                            attrLink.target = '_blank';
+                            attrLink.className = 'slide-attribution';
+                            attrLink.textContent = itemData.attribution;
+                            slide.appendChild(attrLink);
+                        }
+                        container.appendChild(slide);
+                    });
+                    slides = container.querySelectorAll('.carousel-slide');
+                };
+
+                if (items.length > 1 && !overlay.querySelector('.carousel-nav')) {
+                    overlay.insertAdjacentHTML('beforeend', '<div class="carousel-counter"></div><button class="carousel-nav prev" aria-label="Vorheriges Bild"><i data-lucide="chevron-left"></i></button><button class="carousel-nav next" aria-label="Nächstes Bild"><i data-lucide="chevron-right"></i></button>');
+                    overlay.querySelector('.carousel-nav.prev').addEventListener('click', () => updateCarousel(currentIndex - 1));
+                    overlay.querySelector('.carousel-nav.next').addEventListener('click', () => updateCarousel(currentIndex + 1));
+                    lucide.createIcons({ nodes: overlay.querySelectorAll('[data-lucide]') });
+                }
+
+                const positionAttribution = (slide) => {
+                    const media = slide.querySelector('img, video, iframe'), attr = slide.querySelector('.slide-attribution');
+                    if (!media || !attr) return;
+                    const setPos = () => {
+                        const mRect = media.getBoundingClientRect(), pRect = slide.getBoundingClientRect();
+                        attr.style.bottom = `${pRect.bottom - mRect.bottom + 8}px`;
+                        attr.style.right = `${pRect.right - mRect.right + 8}px`;
+                        attr.style.opacity = '1';
+                    };
+                    if (media.tagName === 'IMG' && media.complete) setTimeout(setPos, 150);
+                    else if (media.tagName === 'IMG') media.onload = setPos;
+                    else setTimeout(setPos, 150);
+                };
+
+                const updateCarousel = (newIndex) => {
+                    if (slides.length === 0) return;
+                    clearTimeout(carouselTimeout);
+
+                    const oldSlide = slides[previousIndex];
+                    if (oldSlide) {
+                        const oldVideo = oldSlide.querySelector('video');
+                        if (oldVideo) oldVideo.pause();
+                    }
+
+                    currentIndex = (newIndex + slides.length) % slides.length;
+                    slides.forEach((s, i) => s.classList.toggle('active', i === currentIndex));
+
+                    const newSlide = slides[currentIndex];
+                    if (newSlide) {
+                        const newVideo = newSlide.querySelector('video');
+                        if (newVideo) newVideo.play().catch(e => console.log("Autoplay prevented"));
+                    }
+
+                    positionAttribution(slides[currentIndex]);
+                    const counter = overlay.querySelector('.carousel-counter');
+                    if (counter) counter.textContent = `${currentIndex + 1} / ${slides.length}`;
+                    if (slides.length > 1) carouselTimeout = setTimeout(() => updateCarousel(currentIndex + 1), slides[currentIndex].dataset.interval);
+                    previousIndex = currentIndex;
+                };
+
+                const show = () => {
+                    buildSlides();
+                    this.nodes.body.classList.add('modal-open');
+                    overlay.classList.add('visible');
+                    updateCarousel(0);
+                };
+                const hide = () => {
+                    this.nodes.body.classList.remove('modal-open');
+                    overlay.classList.remove('visible');
+                    clearTimeout(carouselTimeout);
+                    container.innerHTML = ''; // Destroy all media elements on close
+                };
+
+                triggerEl.addEventListener('click', show);
+                closeBtn.addEventListener('click', hide);
+                overlay.addEventListener('click', e => { if (e.target === overlay) hide(); });
+                this.interactiveElements[modalId] = { show, hide };
+            },
+
+            testAndSetSource(element, onlineSrc, localSrc) {
+                const isVideo = element.tagName === 'VIDEO' || (localSrc && localSrc.endsWith('.mp4'));
+
+                const setSrc = (src) => {
+                    if (element.tagName === 'VIDEO') {
+                        element.src = src;
+                        element.load();
+                        element.muted = true;
+                        if (!element.dataset.previewOnly) {
+                            element.play().catch(e => { });
+                        }
+                    } else if (['IMG', 'IFRAME'].includes(element.tagName)) {
+                        element.src = src;
+                    } else {
+                        element.style.backgroundImage = `url('${src}')`;
+                    }
+                };
+
+                if (element.tagName === 'IFRAME' || !localSrc) {
+                    setSrc(onlineSrc);
+                    return;
+                }
+
+                if (isVideo) {
+                    // For videos, try local first
+                    if (element.tagName === 'VIDEO') {
+                        element.addEventListener('error', function handleErr() {
+                            element.removeEventListener('error', handleErr);
+                            // If local mp4 fails, we might need to switch to iframe if online is a link
+                            // But for now just try onlineSrc
+                            setSrc(onlineSrc);
+                        }, { once: true });
+                        setSrc(localSrc);
+                    } else {
+                        // Background or something else
+                        setSrc(localSrc);
+                    }
+                } else {
+                    const tester = new Image();
+                    tester.onload = () => setSrc(localSrc);
+                    tester.onerror = () => setSrc(onlineSrc);
+                    tester.src = localSrc;
+                }
+            },
+
+            initDynamicBackgrounds() {
+                Object.keys(this.localMediaConfig).forEach(key => {
+                    if (key.startsWith('3-')) {
+                        const [onlineSrc, localSrc] = this.localMediaConfig[key];
+                        const cssVarName = `--bg-img-${key.replace(/-/g, '_')}`;
+
+                        const setVar = (src) => {
+                            document.documentElement.style.setProperty(cssVarName, `url('${src}')`);
+                        };
+
+                        if (!localSrc) { setVar(onlineSrc); return; }
+                        const tester = new Image();
+                        tester.onload = () => setVar(localSrc);
+                        tester.onerror = () => setVar(onlineSrc);
+                        tester.src = localSrc;
+                    }
+                });
+            },
+
+            applyMediaFallbacks() {
+                document.querySelectorAll('[data-media-key]').forEach(el => {
+                    const mediaConfig = this.localMediaConfig[el.dataset.mediaKey];
+                    if (mediaConfig) this.testAndSetSource(el, mediaConfig[0], mediaConfig[1]);
+                });
+            },
+
+            prepareAndPrint() {
+                const printableCards = Array.from(this.nodes.cards).filter(c => c.id && c.id !== 'print-back-cover');
+                printableCards.forEach((card, index) => {
+                    card.querySelector('.print-page-indicator').textContent = `${index + 1} / ${printableCards.length}`;
+                    const bgTarget = card.querySelector('.print-bg');
+                    const bgSource = document.querySelector(`.parallax-bg[data-media-key="${card.id.replace('card-', '')}-0"]`);
+                    if (bgTarget && bgSource) bgTarget.style.backgroundImage = bgSource.style.backgroundImage;
+                });
+
+                const backCoverBg = document.querySelector('#print-back-cover .print-bg');
+                const firstSlideBg = document.querySelector('.parallax-bg[data-media-key="1-0"]');
+                if (backCoverBg && firstSlideBg) backCoverBg.style.backgroundImage = firstSlideBg.style.backgroundImage;
+
+                const originalTheme = this.nodes.htmlEl.dataset.theme;
+                this.setTheme('light');
+
+                const afterPrint = () => {
+                    this.setTheme(originalTheme);
+                    window.removeEventListener('afterprint', afterPrint);
+                };
+                window.addEventListener('afterprint', afterPrint);
+                setTimeout(() => window.print(), 100);
+            },
+
+            initializeD3Graph(container) {
+                if (!container) return;
+                const graphData = { nodes: [{ id: "KI in der Geoinformation", group: "main" }, { id: "Technologien & Werkzeuge", group: "category" }, { id: "Mensch & Organisation", group: "category" }, { id: "Autom. Feature-Extraktion", group: "item" }, { id: "KI in QGIS", group: "item" }, { id: "LLMs für GIS", group: "item" }, { id: "Moderne Datensätze", group: "item" }, { id: "Erwartungen", group: "item" }, { id: "Hürden & Treiber", group: "item" }, { id: "Ansatz & Umsetzung", group: "item" }], links: [{ source: "KI in der Geoinformation", target: "Technologien & Werkzeuge" }, { source: "KI in der Geoinformation", target: "Mensch & Organisation" }, { source: "Technologien & Werkzeuge", target: "Autom. Feature-Extraktion" }, { source: "Technologien & Werkzeuge", target: "KI in QGIS" }, { source: "Technologien & Werkzeuge", target: "LLMs für GIS" }, { source: "Technologien & Werkzeuge", target: "Moderne Datensätze" }, { source: "Mensch & Organisation", target: "Erwartungen" }, { source: "Mensch & Organisation", target: "Hürden & Treiber" }, { source: "Mensch & Organisation", target: "Ansatz & Umsetzung" }] };
+                let width = container.clientWidth, height = container.clientHeight;
+                const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim();
+                const color = d3.scaleOrdinal(["main", "category", "item"], [accentColor, "#dcfce7", "#e5e7eb"]);
+                const strokeColor = d3.scaleOrdinal(["main", "category", "item"], [accentColor, "#16a34a", "#6b7280"]);
+                const svg = d3.select(container).append("svg").attr("width", "100%").attr("height", "100%").attr("viewBox", [-width / 2, -height / 2, width, height]);
+                const g = svg.append("g");
+                svg.call(d3.zoom().on("zoom", e => g.attr("transform", e.transform)));
+                const tempText = d3.select("body").append("svg").attr("style", "position:absolute;visibility:hidden;").append("text").attr("font-size", "12px");
+                graphData.nodes.forEach(n => { const bbox = tempText.text(n.id).node().getBBox(); n.width = bbox.width + 30; n.height = bbox.height + 20; });
+                tempText.remove();
+                const simulation = d3.forceSimulation(graphData.nodes).force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => d.source.group === 'main' ? 180 : 120).strength(0.8)).force("charge", d3.forceManyBody().strength(-250)).force("center", d3.forceCenter(0, 0)).force("collide", d3.forceCollide().radius(d => d.width / 2 + 10));
+                const link = g.append("g").selectAll("line").data(graphData.links).join("line").attr("class", "link");
+                const node = g.append("g").selectAll("g").data(graphData.nodes).join("g").attr("class", "node").call(d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended));
+                node.append("rect").attr("width", d => d.width).attr("height", d => d.height).attr("x", d => -d.width / 2).attr("y", d => -d.height / 2).attr("rx", d => d.height / 2).attr("fill", d => color(d.group)).attr("stroke", d => strokeColor(d.group));
+                node.append("text").text(d => d.id).style("fill", d => d.group === 'main' ? '#FFFFFF' : 'var(--d3-text)');
+                simulation.on("tick", () => { link.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y); node.attr("transform", d => `translate(${d.x},${d.y})`); });
+                function dragstarted(e, d) { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; }
+                function dragged(e, d) { d.fx = e.x; d.fy = e.y; }
+                function dragended(e, d) { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; }
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => Presentation.init());
+    </script>
+</body>
+
+</html>
