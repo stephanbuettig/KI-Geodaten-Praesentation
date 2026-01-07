@@ -2236,7 +2236,7 @@
                 return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
             },
 
-            initCarousel(triggerEl) {
+            initCarousel(triggerElement) {
                 const carouselData = {
                     'carousel-geodeep': [{ key: '4-1', type: 'image', attribution: '© UAV4GEO/GeoDeep', link: 'https://github.com/uav4geo/GeoDeep' }, { key: '4-2', type: 'image', attribution: '© UAV4GEO / GeoDeep', link: 'https://github.com/uav4geo/GeoDeep' }, { key: '4-3', type: 'image', attribution: '© UAV4GEO/GeoDeep', link: 'https://github.com/uav4geo/GeoDeep' }],
                     'carousel-geovision': [{ key: '4-4', type: 'image', attribution: '© Microsoft / Geo Vision Labeler', link: 'https://github.com/microsoft/geo-vision-labeler' }, { key: '4-5', type: 'image', attribution: '© Microsoft/Geo Vision Labeler', link: 'https://github.com/microsoft/geo-vision-labeler' }, { key: '4-6', type: 'image', attribution: '© Microsoft/Geo Vision Labeler', link: 'https://github.com/microsoft/geo-vision-labeler' }],
@@ -2263,18 +2263,6 @@
                 let currentIndex = 0, previousIndex = 0, carouselTimeout;
                 let slides = [];
                 let lastFocusedElement; // Store trigger element for focus restore
-
-                // ... media creation code omitted for brevity ...
-                // Note: I am NOT replacing the createMediaElement logic, just the wrapping initCarousel logic.
-                // Wait, multi_replace cannot handle 'omitted' code. I must include the surrounding context carefully or replace the whole function.
-                // Since initCarousel is large, I should target specific blocks. But I need to insert `let lastFocusedElement` at the top of the function scope.
-                // And I need to modify `show` and `hide` at the bottom.
-
-                // Let's use multiple chunks for initCarousel modifications.
-                // CHUNK 1: Variable declaration (actually I can just declare it inside show/hide or at top)
-                // CHUNK 2: show function
-                // CHUNK 3: hide function
-                // CHUNK 4: Focus trap listener
 
 
                 const createMediaElement = (itemData, useLocal) => {
