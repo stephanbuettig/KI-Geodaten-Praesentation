@@ -1996,7 +1996,9 @@
                 });
 
                 document.addEventListener('keydown', (e) => {
-                    if (e.key === 'PageUp' || e.key === 'ArrowUp') {
+                    if (e.key === 'Escape') {
+                        this.handleEscapeKey();
+                    } else if (e.key === 'PageUp' || e.key === 'ArrowUp') {
                         e.preventDefault(); this.handleFastNav(-1);
                     } else if (e.key === ' ' || e.key === 'ArrowDown') {
                         if (document.body.classList.contains('modal-open')) return;
@@ -2169,6 +2171,23 @@
                 }
             },
 
+            handleEscapeKey() {
+                // 1. Modals/Carousels (All use .carousel-overlay)
+                const visibleOverlay = document.querySelector('.carousel-overlay.visible');
+                if (visibleOverlay) {
+                    // Simulate click on close button to trigger existing hide logic (including focus restore)
+                    const closeBtn = visibleOverlay.querySelector('.carousel-close');
+                    if (closeBtn) closeBtn.click();
+                    return;
+                }
+
+                // 2. Settings close
+                if (this.nodes.settingsContainer.classList.contains('expanded')) {
+                    this.nodes.settingsContainer.classList.remove('expanded');
+                    return;
+                }
+            },
+
             setTheme(theme) {
                 this.nodes.htmlEl.dataset.theme = theme;
                 localStorage.setItem('theme', theme);
@@ -2231,6 +2250,9 @@
                         { key: '7-3', type: 'iframe', offlineType: 'video', duration: 23000, attribution: '© Google DeepMind / X', link: 'https://x.com/GoogleDeepMind/status/1950563700286398965' }
                     ]
                 };
+                const triggerEl = typeof triggerElement === 'string' ? document.getElementById(triggerElement) : triggerElement;
+                if (!triggerEl) return; // Guard clause
+
                 const modalId = triggerEl.dataset.modalId;
                 const items = carouselData[modalId];
                 const overlay = document.getElementById(modalId);
@@ -2240,6 +2262,20 @@
                 const closeBtn = overlay.querySelector('.carousel-close');
                 let currentIndex = 0, previousIndex = 0, carouselTimeout;
                 let slides = [];
+                let lastFocusedElement; // Store trigger element for focus restore
+
+                // ... media creation code omitted for brevity ...
+                // Note: I am NOT replacing the createMediaElement logic, just the wrapping initCarousel logic.
+                // Wait, multi_replace cannot handle 'omitted' code. I must include the surrounding context carefully or replace the whole function.
+                // Since initCarousel is large, I should target specific blocks. But I need to insert `let lastFocusedElement` at the top of the function scope.
+                // And I need to modify `show` and `hide` at the bottom.
+
+                // Let's use multiple chunks for initCarousel modifications.
+                // CHUNK 1: Variable declaration (actually I can just declare it inside show/hide or at top)
+                // CHUNK 2: show function
+                // CHUNK 3: hide function
+                // CHUNK 4: Focus trap listener
+
 
                 const createMediaElement = (itemData, useLocal) => {
                     const [onlineSrc, localSrc] = this.localMediaConfig[itemData.key];
@@ -2354,18 +2390,45 @@
                     previousIndex = currentIndex;
                 };
 
+
+
                 const show = () => {
+                    lastFocusedElement = document.activeElement; // Save focus
                     buildSlides();
                     this.nodes.body.classList.add('modal-open');
                     overlay.classList.add('visible');
                     updateCarousel(0);
+                    // Set initial focus to close button
+                    if (closeBtn) closeBtn.focus();
                 };
                 const hide = () => {
                     this.nodes.body.classList.remove('modal-open');
                     overlay.classList.remove('visible');
                     clearTimeout(carouselTimeout);
                     container.innerHTML = ''; // Destroy all media elements on close
+                    if (lastFocusedElement) lastFocusedElement.focus(); // Restore focus
                 };
+
+                // Focus Trap
+                overlay.addEventListener('keydown', (e) => {
+                    if (e.key === 'Tab') {
+                        const focusable = overlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+                        const first = focusable[0];
+                        const last = focusable[focusable.length - 1];
+
+                        if (e.shiftKey) {
+                            if (document.activeElement === first) {
+                                e.preventDefault();
+                                last.focus();
+                            }
+                        } else {
+                            if (document.activeElement === last) {
+                                e.preventDefault();
+                                first.focus();
+                            }
+                        }
+                    }
+                });
 
                 triggerEl.addEventListener('click', show);
                 closeBtn.addEventListener('click', hide);
