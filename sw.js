@@ -48,7 +48,9 @@ const PRECACHE_ASSETS = [
     // Card 7 - Data
     './data/7-1.jpg',
     './data/7-2.jpg',
-    './data/7-3.mp4'
+    './data/7-3.mp4',
+    // Fallback
+    './data/placeholder.svg'
 ];
 
 // Install event - precache assets
@@ -151,6 +153,12 @@ self.addEventListener('fetch', (event) => {
                     .catch(() => {
                         // If both cache and network fail, return offline fallback
                         console.log('[SW] Fetch failed for:', event.request.url);
+
+                        // Check if it's an image request and return placeholder
+                        if (event.request.destination === 'image' || event.request.url.match(/\.(jpg|jpeg|png|gif|svg)$/i)) {
+                            return caches.match('./data/placeholder.svg');
+                        }
+
                         return new Response('Offline - Ressource nicht verfügbar', {
                             status: 503,
                             statusText: 'Service Unavailable',
