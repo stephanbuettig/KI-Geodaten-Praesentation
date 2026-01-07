@@ -1236,102 +1236,161 @@
                 margin: 0;
             }
 
-            html {
-                --bg-color: #f8fafc !important;
-                --text-color: #1e293b !important;
-                --text-light: #475569 !important;
-                --card-bg: rgba(255, 255, 255, 0.8) !important;
-                --card-border: rgba(0, 0, 0, 0.1) !important;
-            }
-
+            html,
             body {
-                scroll-snap-type: none;
-                overflow: visible;
-                height: auto;
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
                 background-color: #fff !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+                overflow: visible;
             }
 
+            /* Layout: Full Page, No Cards */
             .story-card,
             #print-back-cover {
-                height: 100vh;
                 width: 100vw;
+                height: 100vh;
+                page-break-after: always;
+                break-after: page;
                 display: flex !important;
                 justify-content: center;
                 align-items: center;
-                box-sizing: border-box;
-                page-break-before: always;
-            }
-
-            #card-1 {
-                page-break-before: avoid;
+                background: white !important;
             }
 
             #print-back-cover {
-                page-break-after: avoid;
+                page-break-after: avoid !important;
+                break-after: avoid !important;
             }
 
+            /* Fix for blank page at the end of content */
+            .story-card:last-of-type {
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+            }
+
+            /* Content Container Styling: Clean, Scaled */
+            .card-content {
+                width: 90% !important;
+                max-width: none !important;
+                height: auto !important;
+                background: transparent !important;
+                backdrop-filter: none !important;
+                box-shadow: none !important;
+                border: none !important;
+                color: #000 !important;
+                transform: scale(1.15);
+                transform-origin: center center;
+                padding: 0 !important;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+
+            /* Explicitly hide unnecessary UI */
             .parallax-bg,
             #background-container,
             .settings-container,
             .chapter-nav,
             .scroll-indicator,
-            #fixed-attributions {
+            #fixed-attributions,
+            .print-bg {
                 display: none !important;
             }
 
-            .print-bg {
-                display: block !important;
-                position: absolute;
-                inset: 0;
-                background-size: cover;
-                background-position: center;
-                z-index: -1;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-
-            .card-content {
-                opacity: 1 !important;
-                transform: none !important;
-                backdrop-filter: blur(10px) !important;
+            /* --- Fix: D3 Agenda Visibility --- */
+            .interactive-container {
+                border: none !important;
+                background: transparent !important;
                 box-shadow: none !important;
+                height: 600px !important;
+                width: 100% !important;
+                display: block !important;
+                opacity: 1 !important;
+                overflow: visible !important;
             }
 
-            .interactive-container,
+            .interactive-container svg {
+                width: 100% !important;
+                height: 100% !important;
+                display: block !important;
+                overflow: visible !important;
+            }
+
+            .interactive-container .node text {
+                fill: #000 !important;
+                font-weight: bold;
+                font-size: 14px !important;
+            }
+
+            .interactive-container .link {
+                stroke: #000 !important;
+                stroke-width: 2px !important;
+                stroke-opacity: 1 !important;
+            }
+
+            .interactive-container .node rect {
+                stroke: #000 !important;
+                stroke-width: 2px !important;
+            }
+
+            h2 {
+                font-size: 2.5rem !important;
+                margin-bottom: 1.5rem !important;
+                color: #000 !important;
+            }
+
+            p,
+            li {
+                font-size: 1.25rem !important;
+                line-height: 1.6 !important;
+                color: #000 !important;
+            }
+
+            .text-light-text,
+            .light-text {
+                color: #333 !important;
+            }
+
             #ai-carousel-scene {
-                border: 1px solid #ccc;
-                background: #fff !important;
+                border: none !important;
+                box-shadow: none !important;
+                background: transparent !important;
+            }
+
+            #ai-carousel-scene .item label {
+                color: #000 !important;
+                border-right-width: 4px !important;
             }
 
             .print-page-indicator,
             .print-info-bubble {
-                display: inline-block;
-                position: absolute;
-                bottom: 1.5rem;
-                z-index: 5;
-                background-color: rgba(255, 255, 255, 0.75);
-                backdrop-filter: blur(4px);
-                padding: 0.25rem 0.75rem;
-                border-radius: 9999px;
+                display: block !important;
+                position: fixed;
+                bottom: 15mm;
+                background: transparent !important;
+                box-shadow: none !important;
+                backdrop-filter: none;
+                color: #555 !important;
                 font-size: 10pt;
-                font-weight: 500;
-                color: #1e293b;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-                text-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+                border: none !important;
+                padding: 0;
+                text-shadow: none !important;
             }
 
             .print-page-indicator {
-                right: 1.5rem;
+                right: 15mm;
             }
 
-            #print-back-cover .print-info-bubble-left {
-                left: 1.5rem;
+            .print-info-bubble-left {
+                left: 15mm;
             }
 
-            #print-back-cover .print-info-bubble-right {
-                right: 1.5rem;
+            .print-info-bubble-right {
+                right: 15mm;
             }
 
             .reveal-item {
@@ -1601,7 +1660,7 @@
                     <h3 class="font-bold text-green-400 mb-1">GeoDeep</h3>
                     <p class="text-xs text-light-text">Erkennt spezifische Objekte in Rasterbildern</p>
                 </div>
-                <div id="geovision-kachel" data-modal-id="modal-geovision"
+                <div id="geovision-kachel" data-modal-id="carousel-geovision"
                     class="p-4 bg-white/5 rounded-xl border info-kachel cursor-pointer overflow-hidden text-left">
                     <div class="aspect-video w-full mb-3 rounded-lg overflow-hidden bg-black/20">
                         <img data-media-key="4-4" class="w-full h-full object-cover media-fallback"
@@ -1742,9 +1801,8 @@
     <section id="print-back-cover" class="story-card print-only">
         <div class="print-bg"></div>
         <div class="absolute bottom-0 left-0 right-0 p-6 flex justify-between items-center w-full">
-            <div class="print-info-bubble print-info-bubble-left">04.09.2025</div>
-            <div class="print-info-bubble print-info-bubble-right">Digitalagentur Sachsen | Stephan Büttig · Thomas
-                Schindler</div>
+            <div class="print-info-bubble print-info-bubble-left">13.02.2026</div>
+            <div class="print-info-bubble print-info-bubble-right">Digitalagentur Sachsen | Stephan Büttig</div>
         </div>
     </section>
 
@@ -1997,7 +2055,9 @@
                 });
 
                 document.addEventListener('keydown', (e) => {
-                    if (e.key === 'PageUp' || e.key === 'ArrowUp') {
+                    if (e.key === 'Escape') {
+                        this.handleEscapeKey();
+                    } else if (e.key === 'PageUp' || e.key === 'ArrowUp') {
                         e.preventDefault(); this.handleFastNav(-1);
                     } else if (e.key === ' ' || e.key === 'ArrowDown') {
                         if (document.body.classList.contains('modal-open')) return;
@@ -2170,6 +2230,23 @@
                 }
             },
 
+            handleEscapeKey() {
+                // 1. Modals/Carousels (All use .carousel-overlay)
+                const visibleOverlay = document.querySelector('.carousel-overlay.visible');
+                if (visibleOverlay) {
+                    // Simulate click on close button to trigger existing hide logic (including focus restore)
+                    const closeBtn = visibleOverlay.querySelector('.carousel-close');
+                    if (closeBtn) closeBtn.click();
+                    return;
+                }
+
+                // 2. Settings close
+                if (this.nodes.settingsContainer.classList.contains('expanded')) {
+                    this.nodes.settingsContainer.classList.remove('expanded');
+                    return;
+                }
+            },
+
             setTheme(theme) {
                 this.nodes.htmlEl.dataset.theme = theme;
                 localStorage.setItem('theme', theme);
@@ -2218,7 +2295,7 @@
                 return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
             },
 
-            initCarousel(triggerEl) {
+            initCarousel(triggerElement) {
                 const carouselData = {
                     'carousel-geodeep': [{ key: '4-1', type: 'image', attribution: '© UAV4GEO/GeoDeep', link: 'https://github.com/uav4geo/GeoDeep' }, { key: '4-2', type: 'image', attribution: '© UAV4GEO / GeoDeep', link: 'https://github.com/uav4geo/GeoDeep' }, { key: '4-3', type: 'image', attribution: '© UAV4GEO/GeoDeep', link: 'https://github.com/uav4geo/GeoDeep' }],
                     'carousel-geovision': [{ key: '4-4', type: 'image', attribution: '© Microsoft / Geo Vision Labeler', link: 'https://github.com/microsoft/geo-vision-labeler' }, { key: '4-5', type: 'image', attribution: '© Microsoft/Geo Vision Labeler', link: 'https://github.com/microsoft/geo-vision-labeler' }, { key: '4-6', type: 'image', attribution: '© Microsoft/Geo Vision Labeler', link: 'https://github.com/microsoft/geo-vision-labeler' }],
@@ -2232,6 +2309,9 @@
                         { key: '7-3', type: 'iframe', offlineType: 'video', duration: 23000, attribution: '© Google DeepMind / X', link: 'https://x.com/GoogleDeepMind/status/1950563700286398965' }
                     ]
                 };
+                const triggerEl = typeof triggerElement === 'string' ? document.getElementById(triggerElement) : triggerElement;
+                if (!triggerEl) return; // Guard clause
+
                 const modalId = triggerEl.dataset.modalId;
                 const items = carouselData[modalId];
                 const overlay = document.getElementById(modalId);
@@ -2241,6 +2321,8 @@
                 const closeBtn = overlay.querySelector('.carousel-close');
                 let currentIndex = 0, previousIndex = 0, carouselTimeout;
                 let slides = [];
+                let lastFocusedElement; // Store trigger element for focus restore
+
 
                 const createMediaElement = (itemData, useLocal) => {
                     const [onlineSrc, localSrc] = this.localMediaConfig[itemData.key];
@@ -2263,6 +2345,7 @@
                             mediaElement.alt = "Beispielbild";
                             break;
                     }
+                    mediaElement.className = 'w-full h-full object-contain';
                     mediaElement.src = src;
                     return mediaElement;
                 };
@@ -2355,18 +2438,45 @@
                     previousIndex = currentIndex;
                 };
 
+
+
                 const show = () => {
+                    lastFocusedElement = document.activeElement; // Save focus
                     buildSlides();
                     this.nodes.body.classList.add('modal-open');
                     overlay.classList.add('visible');
                     updateCarousel(0);
+                    // Set initial focus to close button
+                    if (closeBtn) closeBtn.focus();
                 };
                 const hide = () => {
                     this.nodes.body.classList.remove('modal-open');
                     overlay.classList.remove('visible');
                     clearTimeout(carouselTimeout);
                     container.innerHTML = ''; // Destroy all media elements on close
+                    if (lastFocusedElement) lastFocusedElement.focus(); // Restore focus
                 };
+
+                // Focus Trap
+                overlay.addEventListener('keydown', (e) => {
+                    if (e.key === 'Tab') {
+                        const focusable = overlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+                        const first = focusable[0];
+                        const last = focusable[focusable.length - 1];
+
+                        if (e.shiftKey) {
+                            if (document.activeElement === first) {
+                                e.preventDefault();
+                                last.focus();
+                            }
+                        } else {
+                            if (document.activeElement === last) {
+                                e.preventDefault();
+                                first.focus();
+                            }
+                        }
+                    }
+                });
 
                 triggerEl.addEventListener('click', show);
                 closeBtn.addEventListener('click', hide);
