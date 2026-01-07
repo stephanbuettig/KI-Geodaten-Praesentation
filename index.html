@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🧩 KI-Potenziale im GeoSN 🧵</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0672A2">
 
     <script src="lib/tailwind.min.js"></script>
     <link href="lib/fonts/inter.css" rel="stylesheet">
@@ -2491,7 +2493,20 @@
             }
         };
 
-        document.addEventListener('DOMContentLoaded', () => Presentation.init());
+        document.addEventListener('DOMContentLoaded', () => {
+            Presentation.init();
+
+            // Register Service Worker for offline capability
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./sw.js')
+                    .then((registration) => {
+                        console.log('[App] Service Worker registered:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.warn('[App] Service Worker registration failed:', error);
+                    });
+            }
+        });
     </script>
 </body>
 
